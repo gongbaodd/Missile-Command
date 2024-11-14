@@ -4,6 +4,9 @@ function setup() {
 
 function draw() {
   background(220);
+
+  textSize(100);
+  text('🏤', 150, 150);
 }
 
 function windowResized() {
