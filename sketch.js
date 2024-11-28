@@ -1,3 +1,5 @@
+const DEV = true
+
 class Entity {
   constructor(id) {
     this.id = id;
@@ -27,7 +29,13 @@ class Position {
 class Plate {
   constructor(r) {
     this.radius = r
-    this.height = 10
+    this.height = 1
+  }
+}
+
+class Cursor {
+  constructor(r) {
+    this.radius = r
   }
 }
 
@@ -40,7 +48,8 @@ class Color {
 }
 
 const IDs = {
-  "ground": 1
+  "ground": "ground",
+  "cursor": "cursor",
 }
 
 class System {
@@ -60,6 +69,18 @@ class System {
         cylinder(plate.radius, plate.height)
         pop()
       }
+
+      if (entity.getComponent(Cursor)) {
+        const ball = entity.getComponent(Cursor)
+        const position = entity.getComponent(Position)
+        const color = entity.getComponent(Color)
+
+        push()
+        translate(position.x, position.y, position.z)
+        fill(color.r, color.g, color.b)
+        sphere(ball.radius)
+        pop()
+      }
     });
   }
 }
@@ -74,32 +95,51 @@ function setup() {
 
   const entities = []
   const ground = new Entity(IDs.ground)
-  ground.addComponent(new Plate(150))
+  ground.addComponent(new Plate(300))
   ground.addComponent(new Position(0, 300, 0))
   ground.addComponent(new Color(150, 200, 250))
-
-  /* <!-- DEV */
-  const groundMenu = gui.addFolder("ground");
-  groundMenu.add(ground.getComponent(Plate), "radius", 70, 300).name("Radius").onChange(drawScene)
-  const colorMenu = groundMenu.addFolder("color")
-  colorMenu.add(ground.getComponent(Color), "r", 0, 255).name("R").onChange(drawScene)
-  colorMenu.add(ground.getComponent(Color), "g", 0, 255).name("G").onChange(drawScene)
-  colorMenu.add(ground.getComponent(Color), "b", 0, 255).name("B").onChange(drawScene)
-  const posMenu = groundMenu.addFolder("position")
-  posMenu.add(ground.getComponent(Position), "x", 0, 300).name("X").onChange(drawScene)
-  posMenu.add(ground.getComponent(Position), "y", 0, 300).name("Y").onChange(drawScene)
-  posMenu.add(ground.getComponent(Position), "z", 0, 300).name("Z").onChange(drawScene)
-  /* DEV --> */
-
   entities.push(ground)
 
-  const sys = new System(entities)
+  if (DEV) {
+    const groundMenu = gui.addFolder("ground");
+    groundMenu.add(ground.getComponent(Plate), "radius", 300, 500).name("Radius")
+    const colorMenu = groundMenu.addFolder("color")
+    colorMenu.add(ground.getComponent(Color), "r", 0, 255).name("R")
+    colorMenu.add(ground.getComponent(Color), "g", 0, 255).name("G")
+    colorMenu.add(ground.getComponent(Color), "b", 0, 255).name("B")
+    const posMenu = groundMenu.addFolder("position")
+    posMenu.add(ground.getComponent(Position), "x", 0, 300).name("X")
+    posMenu.add(ground.getComponent(Position), "y", 0, 300).name("Y")
+    posMenu.add(ground.getComponent(Position), "z", 0, 300).name("Z")
+  }
 
+  const groundPos = ground.getComponent(Position)
+  const groundShape = ground.getComponent(Plate)
+  let count = 0
+  for (let x = -groundShape.radius; x < groundShape.radius; x += 33) {
+    for (let z = -groundShape.radius; z < groundShape.radius; z += 33) {
+      if (x * x + z * z <= groundShape.radius * groundShape.radius) {
+        const ball = new Entity(IDs.cursor + "-" + count++)
+        ball.addComponent(new Cursor(3))
+        ball.addComponent(new Position(x, groundPos.y, z))
+        ball.addComponent(new Color(0, 0, 255))
+        entities.push(ball)
+      }
+    }
+  }
+
+
+
+  const sys = new System(entities)
   system = sys
 }
 
 function draw() {
+  if (DEV) {
+    // orbitControl()
+  }
   drawScene()
+
 }
 
 function windowResized() {
