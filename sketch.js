@@ -26,7 +26,7 @@ class Position {
   }
 }
 
-class Plate {
+class Ground {
   constructor(r) {
     this.radius = r
     this.height = 1
@@ -58,15 +58,15 @@ class System {
   }
   update() {
     this.entities.forEach(entity => {
-      if (entity.id === IDs.ground) {
+      if (entity.getComponent(Ground)) {
         const position = entity.getComponent(Position)
-        const plate = entity.getComponent(Plate)
+        const ground = entity.getComponent(Ground)
         const color = entity.getComponent(Color)
 
         push()
         translate(position.x, position.y, position.z)
         fill(color.r, color.g, color.b)
-        cylinder(plate.radius, plate.height)
+        cylinder(ground.radius, ground.height)
         pop()
       }
 
@@ -95,26 +95,16 @@ function setup() {
 
   const entities = []
   const ground = new Entity(IDs.ground)
-  ground.addComponent(new Plate(300))
+  ground.addComponent(new Ground(300))
   ground.addComponent(new Position(0, 300, 0))
   ground.addComponent(new Color(150, 200, 250))
   entities.push(ground)
+  addGroundMenu(ground)
 
-  if (DEV) {
-    const groundMenu = gui.addFolder("ground");
-    groundMenu.add(ground.getComponent(Plate), "radius", 300, 500).name("Radius")
-    const colorMenu = groundMenu.addFolder("color")
-    colorMenu.add(ground.getComponent(Color), "r", 0, 255).name("R")
-    colorMenu.add(ground.getComponent(Color), "g", 0, 255).name("G")
-    colorMenu.add(ground.getComponent(Color), "b", 0, 255).name("B")
-    const posMenu = groundMenu.addFolder("position")
-    posMenu.add(ground.getComponent(Position), "x", 0, 300).name("X")
-    posMenu.add(ground.getComponent(Position), "y", 0, 300).name("Y")
-    posMenu.add(ground.getComponent(Position), "z", 0, 300).name("Z")
-  }
+
 
   const groundPos = ground.getComponent(Position)
-  const groundShape = ground.getComponent(Plate)
+  const groundShape = ground.getComponent(Ground)
   let count = 0
   for (let x = -groundShape.radius; x < groundShape.radius; x += 33) {
     for (let z = -groundShape.radius; z < groundShape.radius; z += 33) {
@@ -149,4 +139,24 @@ function windowResized() {
 function drawScene() {
   background(255)
   system.update()
+}
+
+function mousePressed() {
+  const cursors = system.entities.findAll(entity => entity.id === IDs.cursor)
+  
+}
+
+function addGroundMenu(ground) {
+  if (DEV) {
+    const groundMenu = gui.addFolder("ground");
+    groundMenu.add(ground.getComponent(Ground), "radius", 300, 500).name("Radius")
+    const colorMenu = groundMenu.addFolder("color")
+    colorMenu.add(ground.getComponent(Color), "r", 0, 255).name("R")
+    colorMenu.add(ground.getComponent(Color), "g", 0, 255).name("G")
+    colorMenu.add(ground.getComponent(Color), "b", 0, 255).name("B")
+    const posMenu = groundMenu.addFolder("position")
+    posMenu.add(ground.getComponent(Position), "x", 0, 300).name("X")
+    posMenu.add(ground.getComponent(Position), "y", 0, 300).name("Y")
+    posMenu.add(ground.getComponent(Position), "z", 0, 300).name("Z")
+  }
 }
