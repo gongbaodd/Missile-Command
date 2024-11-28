@@ -34,8 +34,9 @@ class Ground {
 }
 
 class Cursor {
-  constructor(r) {
-    this.radius = r
+  constructor(radius, space) {
+    this.radius = radius
+    this.space = space
   }
 }
 
@@ -71,15 +72,24 @@ class System {
       }
 
       if (entity.getComponent(Cursor)) {
-        const ball = entity.getComponent(Cursor)
-        const position = entity.getComponent(Position)
+        const ground = this.entities.find(entity => entity.id === IDs.ground)
+        const groundPos = ground.getComponent(Position)
+        const groundShape = ground.getComponent(Ground)
+        const cursor = entity.getComponent(Cursor)
         const color = entity.getComponent(Color)
 
-        push()
-        translate(position.x, position.y, position.z)
-        fill(color.r, color.g, color.b)
-        sphere(ball.radius)
-        pop()
+        for (let x = -groundShape.radius; x < groundShape.radius; x += cursor.space) {
+          for (let z = -groundShape.radius; z < groundShape.radius; z += cursor.space) {
+            if (x * x + z * z <= groundShape.radius * groundShape.radius) {
+              push()
+              translate(x, groundPos.y, z)
+              fill(color.r, color.g, color.b)
+              sphere(cursor.radius)
+              pop()
+            }
+          }
+        }
+
       }
     });
   }
@@ -101,24 +111,12 @@ function setup() {
   entities.push(ground)
   addGroundMenu(ground)
 
-
-
-  const groundPos = ground.getComponent(Position)
-  const groundShape = ground.getComponent(Ground)
-  let count = 0
-  for (let x = -groundShape.radius; x < groundShape.radius; x += 33) {
-    for (let z = -groundShape.radius; z < groundShape.radius; z += 33) {
-      if (x * x + z * z <= groundShape.radius * groundShape.radius) {
-        const ball = new Entity(IDs.cursor + "-" + count++)
-        ball.addComponent(new Cursor(3))
-        ball.addComponent(new Position(x, groundPos.y, z))
-        ball.addComponent(new Color(0, 0, 255))
-        entities.push(ball)
-      }
-    }
-  }
-
-
+  const cursor = new Entity(IDs.cursor)
+  cursor.addComponent(new Cursor(5, 33))
+  cursor.addComponent(new Position(0, 300, 0))
+  cursor.addComponent(new Color(0, 0, 255))
+  entities.push(cursor)
+  addCursorMenu(cursor)
 
   const sys = new System(entities)
   system = sys
@@ -142,7 +140,7 @@ function drawScene() {
 }
 
 function mousePressed() {
-  const cursors = system.entities.findAll(entity => entity.id === IDs.cursor)
+ 
   
 }
 
@@ -155,8 +153,18 @@ function addGroundMenu(ground) {
     colorMenu.add(ground.getComponent(Color), "g", 0, 255).name("G")
     colorMenu.add(ground.getComponent(Color), "b", 0, 255).name("B")
     const posMenu = groundMenu.addFolder("position")
-    posMenu.add(ground.getComponent(Position), "x", 0, 300).name("X")
     posMenu.add(ground.getComponent(Position), "y", 0, 300).name("Y")
-    posMenu.add(ground.getComponent(Position), "z", 0, 300).name("Z")
+  }
+}
+
+function addCursorMenu(cursor) {
+  if(DEV) {
+    const cursorMenu = gui.addFolder("cursor")
+    cursorMenu.add(cursor.getComponent(Cursor), "radius", 5, 10).name("Radius")
+    cursorMenu.add(cursor.getComponent(Cursor), "space", 10, 50).name("Space")
+    const colorMenu = cursorMenu.addFolder("color")
+    colorMenu.add(cursor.getComponent(Color), "r", 0, 255).name("R")
+    colorMenu.add(cursor.getComponent(Color), "g", 0, 255).name("G")
+    colorMenu.add(cursor.getComponent(Color), "b", 0, 255).name("B")
   }
 }
