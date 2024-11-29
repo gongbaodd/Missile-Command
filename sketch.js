@@ -1,4 +1,7 @@
 const DEV = true
+const settings = {
+  orbitControl: false,
+}
 
 class Entity {
   constructor(id) {
@@ -33,7 +36,7 @@ class Ground {
   }
 }
 Ground.update = function (entity) {
-  if (entity.getComponent(Ground)) {
+  if (entity.hasComponent(Ground)) {
     const position = entity.getComponent(Position)
     const ground = entity.getComponent(Ground)
     const color = entity.getComponent(Color)
@@ -58,7 +61,7 @@ Cursor.pressed = false
 Cursor.pressedTime = 0
 Cursor.marker = null
 Cursor.update = function (entity, sys) {
-  if (entity.getComponent(Cursor)) {
+  if (entity.hasComponent(Cursor)) {
     const ground = sys.entities.find(entity => entity.id === IDs.ground)
     const groundPos = ground.getComponent(Position)
     const groundShape = ground.getComponent(Ground)
@@ -125,9 +128,45 @@ class Color {
 
 class HoverColor extends Color { }
 
+class Laser {
+  constructor() {
+  }
+}
+Laser.update = function (entity, sys) {
+  if (entity.hasComponent(Laser)) {
+    const ground = sys.entities.find(entity => entity.id === IDs.ground)
+    const groundPos = ground.getComponent(Position)
+    const position = entity.getComponent(Position)
+
+    push()
+    translate(position.x, groundPos.y, position.z)
+
+    // stroke(1)
+
+    fill(250, 150, 150)
+    translate(0, -190, 0);
+    cylinder(10, 20)
+  
+    fill(150, 250, 150);
+    translate(0, 60, 0);
+    cone(100, 100);
+    
+    const axis = createVector(1, 0, 0);
+    rotate(PI, axis);
+  
+    fill(0, 250, 150);
+    translate(0, -80, 0);
+    cone(60, 100);
+    pop()
+
+  }
+}
+
+
 const IDs = {
-  "ground": "ground",
-  "cursor": "cursor",
+  "ground": 1,
+  "cursor": 2,
+  "laser": 3,
 }
 
 class System {
@@ -139,6 +178,7 @@ class System {
     this.entities.forEach(entity => {
       Ground.update(entity)
       Cursor.update(entity, this)
+      Laser.update(entity, this)
     });
   }
 }
@@ -150,6 +190,8 @@ let angle = 0;
 function setup() {
   createCanvas(windowWidth, windowHeight, WEBGL)
   noStroke()
+
+  addOrbitControlMenu()
 
   const entities = []
   const ground = new Entity(IDs.ground)
@@ -167,14 +209,18 @@ function setup() {
   entities.push(cursor)
   addCursorMenu(cursor)
 
+  const laser = new Entity(IDs.laser)
+  laser.addComponent(new Laser())
+  laser.addComponent(new Position(100, 300, 200))
+  entities.push(laser)
+  addLaserMenu(laser)
+
   const sys = new System(entities)
   system = sys
 }
 
 function draw() {
-  if (DEV) {
-    // orbitControl()
-  }
+  if (settings.orbitControl) orbitControl()
   drawScene()
 }
 
@@ -189,9 +235,12 @@ function drawScene() {
 
 function mouseMoved() {
   if (Cursor.pressed) return;
+  if (!system) return;
 
   // the default fovy is 2 * atan(height / 2 / 800). 800 is the camera's Z position
   const ground = system.entities.find(e => e.getComponent(Ground))
+  if (!ground) return;
+
   const gPos = ground.getComponent(Position)
   const planeY = gPos.y
 
@@ -225,6 +274,12 @@ function mouseReleased() {
   Cursor.pressedTime = 0
 }
 
+function addOrbitControlMenu() {
+  if (DEV) {
+    gui.add(settings, "orbitControl").name("Orbit Control")
+  }
+}
+
 function addGroundMenu(ground) {
   if (DEV) {
     const groundMenu = gui.addFolder("ground");
@@ -251,6 +306,15 @@ function addCursorMenu(cursor) {
     hoverMenu.add(cursor.getComponent(HoverColor), "r", 0, 255).name("R")
     hoverMenu.add(cursor.getComponent(HoverColor), "g", 0, 255).name("G")
     hoverMenu.add(cursor.getComponent(HoverColor), "b", 0, 255).name("B")
+  }
+}
+
+function addLaserMenu(laser) {
+  if (DEV) {
+    const laserMenu = gui.addFolder("laser");
+    const posMenu = laserMenu.addFolder("position")
+    posMenu.add(laser.getComponent(Position), "x", -300, 300).name("X")
+    posMenu.add(laser.getComponent(Position), "z", -300, 300).name("Z")
   }
 }
 
