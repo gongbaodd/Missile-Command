@@ -148,7 +148,12 @@ Laser.update = function (entity, sys) {
 
     push()
     push()
+
+  
       translate(position.x, groundPos.y, position.z)
+
+      // const headAxis = createVector(0, 0, 1);
+      // rotate(PI/2, headAxis);
 
       fill(emmiterColor.r, emmiterColor.g, emmiterColor.b)
       translate(0, -laser.size, 0);
