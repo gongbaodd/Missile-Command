@@ -32,6 +32,19 @@ class Ground {
     this.height = 1
   }
 }
+Ground.update = function (entity) {
+  if (entity.getComponent(Ground)) {
+    const position = entity.getComponent(Position)
+    const ground = entity.getComponent(Ground)
+    const color = entity.getComponent(Color)
+
+    push()
+    translate(position.x, position.y, position.z)
+    fill(color.r, color.g, color.b)
+    cylinder(ground.radius, ground.height, 100)
+    pop()
+  }
+}
 
 class Cursor {
   constructor(radius, space, height) {
@@ -44,6 +57,63 @@ Cursor.mousePos = null
 Cursor.pressed = false
 Cursor.pressedTime = 0
 Cursor.marker = null
+Cursor.update = function (entity, sys) {
+  if (entity.getComponent(Cursor)) {
+    const ground = sys.entities.find(entity => entity.id === IDs.ground)
+    const groundPos = ground.getComponent(Position)
+    const groundShape = ground.getComponent(Ground)
+    const cursor = entity.getComponent(Cursor)
+    const color = entity.getComponent(Color)
+    const hoverColor = entity.getComponent(HoverColor)
+
+    for (let x = -groundShape.radius; x < groundShape.radius; x += cursor.space) {
+      for (let z = -groundShape.radius; z < groundShape.radius; z += cursor.space) {
+        if (x * x + z * z <= groundShape.radius * groundShape.radius) {
+          // if in the ground
+          const v = createVector(x, groundPos.y, z)
+          const { dist } = {
+            get dist() {
+              if (!Cursor.mousePos) {
+                return Infinity
+              }
+              return v.dist(Cursor.mousePos)
+            }
+          }
+
+          push()
+          translate(v.x, v.y, v.z)
+
+          fill(color.r, color.g, color.b)
+
+          if (dist < cursor.space / 2) {
+            fill(hoverColor.r, hoverColor.g, hoverColor.b)
+
+            if (Cursor.pressed) {
+              const ch = cursor.clickHight * Cursor.pressedTime
+              push()
+              translate(0, -ch / 2, 0)
+              cylinder(cursor.radius, ch)
+              pop()
+              Cursor.pressedTime += 1
+              Cursor.marker = v.add(createVector(0, -ch, 0))
+            }
+          }
+
+          sphere(cursor.radius)
+          pop()
+        }
+      }
+    }
+
+    if (Cursor.marker) {
+      push()
+      translate(Cursor.marker.x, Cursor.marker.y, Cursor.marker.z)
+      fill(hoverColor.r, hoverColor.g, hoverColor.b)
+      sphere(cursor.radius)
+      pop()
+    }
+  }
+}
 
 class Color {
   constructor(r, g, b) {
@@ -66,80 +136,10 @@ class System {
   }
   update() {
     addCursorDebugger()
-
     this.entities.forEach(entity => {
-      if (entity.getComponent(Ground)) {
-        const position = entity.getComponent(Position)
-        const ground = entity.getComponent(Ground)
-        const color = entity.getComponent(Color)
-
-        push()
-        translate(position.x, position.y, position.z)
-        fill(color.r, color.g, color.b)
-        cylinder(ground.radius, ground.height, 100)
-        pop()
-      }// Ground
-
-      if (entity.getComponent(Cursor)) {
-        const ground = this.entities.find(entity => entity.id === IDs.ground)
-        const groundPos = ground.getComponent(Position)
-        const groundShape = ground.getComponent(Ground)
-        const cursor = entity.getComponent(Cursor)
-        const color = entity.getComponent(Color)
-        const hoverColor = entity.getComponent(HoverColor)
-
-        for (let x = -groundShape.radius; x < groundShape.radius; x += cursor.space) {
-          for (let z = -groundShape.radius; z < groundShape.radius; z += cursor.space) {
-            if (x * x + z * z <= groundShape.radius * groundShape.radius) {
-              // if in the ground
-              const v = createVector(x, groundPos.y, z)
-              const { dist } = {
-                get dist() {
-                  if (!Cursor.mousePos) {
-                    return Infinity
-                  }
-                  return v.dist(Cursor.mousePos)
-                }
-              }
-
-              push()
-              translate(v.x, v.y, v.z)
-
-              fill(color.r, color.g, color.b)
-
-              if (dist < cursor.space / 2) {
-                fill(hoverColor.r, hoverColor.g, hoverColor.b)
-
-                if (Cursor.pressed) {
-                  const ch = cursor.clickHight * Cursor.pressedTime
-                  push()
-                  translate(0, -ch / 2, 0)
-                  cylinder(cursor.radius, ch)
-                  pop()
-                  Cursor.pressedTime += 1
-                  Cursor.marker = v.add(createVector(0, -ch, 0))
-                }
-              }
-
-              sphere(cursor.radius)
-              pop()
-            }
-          }
-        }
-
-        if (Cursor.marker) {
-          push()
-          translate(Cursor.marker.x, Cursor.marker.y, Cursor.marker.z)
-          fill(hoverColor.r, hoverColor.g, hoverColor.b)
-          sphere(cursor.radius)
-          pop()
-        }
-      } // Cursor
-
-
+      Ground.update(entity)
+      Cursor.update(entity, this)
     });
-
-
   }
 }
 
