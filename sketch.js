@@ -1,6 +1,7 @@
 const DEV = true
 const settings = {
   orbitControl: false,
+  fontRegular: null,
 }
 
 class Entity {
@@ -147,29 +148,39 @@ Laser.update = function (entity, sys) {
     const headColor = entity.getComponent(LaserHeadColor)
 
     push()
-    push()
 
-  
-      translate(position.x, groundPos.y, position.z)
+    const { rotation } = {
+      get rotation() {
+        if (!Cursor.marker) {
+          return null
+        }
 
-      // const headAxis = createVector(0, 0, 1);
-      // rotate(PI/2, headAxis);
+        // const dx = marker.x - position.x
+      }
+    }
 
-      fill(emmiterColor.r, emmiterColor.g, emmiterColor.b)
-      translate(0, -laser.size, 0);
-      cylinder(laser.size/20, laser.size/8)
+    push() // <!--Cone Header
+    translate(position.x, groundPos.y, position.z)
 
-      fill(headColor.r, headColor.g, headColor.b);
-      translate(0, laser.size/3, 0);
-      cone(laser.size/2, laser.size/2);
-    pop()
 
-    const axis = createVector(1, 0, 0);
+    fill(emmiterColor.r, emmiterColor.g, emmiterColor.b)
+    translate(0, -laser.size, 0)
+    cylinder(laser.size / 20, laser.size / 8)
+
+
+    fill(headColor.r, headColor.g, headColor.b)
+    translate(0, laser.size / 3, 0)
+    cone(laser.size / 2, laser.size / 2)
+    axisHelper()
+
+    pop() // Cone Header -->
+
+    const axis = createVector(1, 0, 0)
     rotate(PI, axis);
-  
-    fill(bodyColor.r, bodyColor.g, bodyColor.b);
-    translate(position.x, -groundPos.y + laser.size/3.6, -position.z);
-    cone(laser.size/3, laser.size/2);
+
+    fill(bodyColor.r, bodyColor.g, bodyColor.b)
+    translate(position.x, -groundPos.y + laser.size / 3.6, -position.z)
+    cone(laser.size / 3, laser.size / 2)
     pop()
 
   }
@@ -238,6 +249,10 @@ function setup() {
 function draw() {
   if (settings.orbitControl) orbitControl()
   drawScene()
+}
+
+function preload() {
+  settings.fontRegular = loadFont("./Regular.otf")
 }
 
 function windowResized() {
@@ -363,4 +378,40 @@ function addCursorDebugger() {
       pop()
     }
   }
+}
+
+
+function axisHelper(size = 32) {
+  if (DEV) {
+
+    push();
+
+    stroke(255, 0, 0);
+    strokeWeight(2);
+    line(0, 0, 0, size, 0, 0);
+    textLabel("X", size + 10, 0, 0);
+
+    stroke(0, 255, 0);
+    strokeWeight(2);
+    line(0, 0, 0, 0, size, 0);
+    textLabel("Y", 0, size + 10, 0);
+
+    stroke(0, 0, 255);
+    strokeWeight(2);
+    line(0, 0, 0, 0, 0, size);
+    textLabel("Z", 0, 0, size + 10);
+
+    pop();
+  }
+}
+
+function textLabel(txt, x, y, z) {
+  push();
+  textFont(settings.fontRegular);
+  translate(x, y, z);
+  fill(0);
+  noStroke();
+  textSize(16);
+  text(txt, 0, 0);
+  pop();
 }
