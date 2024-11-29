@@ -42,6 +42,7 @@ class Cursor {
 }
 Cursor.mousePos = null
 Cursor.pressed = false
+Cursor.pressedTime = 0
 
 class Color {
   constructor(r, g, b) {
@@ -51,7 +52,7 @@ class Color {
   }
 }
 
-class HoverColor extends Color {}
+class HoverColor extends Color { }
 
 const IDs = {
   "ground": "ground",
@@ -91,7 +92,7 @@ class System {
             if (x * x + z * z <= groundShape.radius * groundShape.radius) {
               // if in the ground
               const v = createVector(x, groundPos.y, z)
-              const { dist } =  {
+              const { dist } = {
                 get dist() {
                   if (!Cursor.mousePos) {
                     return Infinity
@@ -105,9 +106,17 @@ class System {
 
               fill(color.r, color.g, color.b)
 
-              if (dist < cursor.space/2) {
+              if (dist < cursor.space / 2) {
                 fill(hoverColor.r, hoverColor.g, hoverColor.b)
-                cylinder(cursor.radius, cursor.clickHight * Cursor.mousePressedTime)
+
+                if (Cursor.pressed) {
+                  const ch = cursor.clickHight * Cursor.pressedTime
+                  push()
+                  translate(0, -ch / 2, 0)
+                  cylinder(cursor.radius, ch)
+                  pop()
+                  Cursor.pressedTime += 1
+                }
               }
 
               sphere(cursor.radius)
@@ -132,14 +141,14 @@ function setup() {
 
   const entities = []
   const ground = new Entity(IDs.ground)
-  ground.addComponent(new Ground(500))
+  ground.addComponent(new Ground(330))
   ground.addComponent(new Position(0, 300, 0))
   ground.addComponent(new Color(150, 200, 250))
   entities.push(ground)
   addGroundMenu(ground)
 
   const cursor = new Entity(IDs.cursor)
-  cursor.addComponent(new Cursor(6, 60, 100))
+  cursor.addComponent(new Cursor(6, 60, 10))
   cursor.addComponent(new Position(0, 300, 0))
   cursor.addComponent(new Color(0, 0, 255))
   cursor.addComponent(new HoverColor(255, 0, 0))
@@ -201,6 +210,7 @@ function mousePressed() {
 
 function mouseReleased() {
   Cursor.pressed = false
+  Cursor.pressedTime = 0
 }
 
 function addGroundMenu(ground) {
