@@ -43,6 +43,7 @@ class Cursor {
 Cursor.mousePos = null
 Cursor.pressed = false
 Cursor.pressedTime = 0
+Cursor.marker = null
 
 class Color {
   constructor(r, g, b) {
@@ -116,6 +117,7 @@ class System {
                   cylinder(cursor.radius, ch)
                   pop()
                   Cursor.pressedTime += 1
+                  Cursor.marker = v.add(createVector(0, -ch, 0))
                 }
               }
 
@@ -124,10 +126,20 @@ class System {
             }
           }
         }
+
+        if (Cursor.marker) {
+          push()
+          translate(Cursor.marker.x, Cursor.marker.y, Cursor.marker.z)
+          fill(hoverColor.r, hoverColor.g, hoverColor.b)
+          sphere(cursor.radius)
+          pop()
+        }
       } // Cursor
 
 
     });
+
+
   }
 }
 
