@@ -127,9 +127,13 @@ class Color {
 }
 
 class HoverColor extends Color { }
+class LaserHeadColor extends Color { }
+class LaserBodyColor extends Color { }
+class LaserEmitterColor extends Color { }
 
 class Laser {
-  constructor() {
+  constructor(size) {
+    this.size = size
   }
 }
 Laser.update = function (entity, sys) {
@@ -137,26 +141,30 @@ Laser.update = function (entity, sys) {
     const ground = sys.entities.find(entity => entity.id === IDs.ground)
     const groundPos = ground.getComponent(Position)
     const position = entity.getComponent(Position)
+    const laser = entity.getComponent(Laser)
+    const emmiterColor = entity.getComponent(LaserEmitterColor)
+    const bodyColor = entity.getComponent(LaserBodyColor)
+    const headColor = entity.getComponent(LaserHeadColor)
 
     push()
-    translate(position.x, groundPos.y, position.z)
+    push()
+      translate(position.x, groundPos.y, position.z)
 
-    // stroke(1)
+      fill(emmiterColor.r, emmiterColor.g, emmiterColor.b)
+      translate(0, -laser.size, 0);
+      cylinder(laser.size/20, laser.size/8)
 
-    fill(250, 150, 150)
-    translate(0, -190, 0);
-    cylinder(10, 20)
-  
-    fill(150, 250, 150);
-    translate(0, 60, 0);
-    cone(100, 100);
-    
+      fill(headColor.r, headColor.g, headColor.b);
+      translate(0, laser.size/3, 0);
+      cone(laser.size/2, laser.size/2);
+    pop()
+
     const axis = createVector(1, 0, 0);
     rotate(PI, axis);
   
-    fill(0, 250, 150);
-    translate(0, -80, 0);
-    cone(60, 100);
+    fill(bodyColor.r, bodyColor.g, bodyColor.b);
+    translate(position.x, -groundPos.y + laser.size/3.6, -position.z);
+    cone(laser.size/3, laser.size/2);
     pop()
 
   }
@@ -210,8 +218,11 @@ function setup() {
   addCursorMenu(cursor)
 
   const laser = new Entity(IDs.laser)
-  laser.addComponent(new Laser())
-  laser.addComponent(new Position(100, 300, 200))
+  laser.addComponent(new Laser(60))
+  laser.addComponent(new Position(300, 300, 0))
+  laser.addComponent(new LaserHeadColor(150, 250, 150))
+  laser.addComponent(new LaserBodyColor(0, 250, 150))
+  laser.addComponent(new LaserEmitterColor(250, 150, 150))
   entities.push(laser)
   addLaserMenu(laser)
 
@@ -312,9 +323,26 @@ function addCursorMenu(cursor) {
 function addLaserMenu(laser) {
   if (DEV) {
     const laserMenu = gui.addFolder("laser");
+    laserMenu.add(laser.getComponent(Laser), "size", 0, 200).name("Size")
+
     const posMenu = laserMenu.addFolder("position")
     posMenu.add(laser.getComponent(Position), "x", -300, 300).name("X")
     posMenu.add(laser.getComponent(Position), "z", -300, 300).name("Z")
+
+    const emmiterColorMenu = laserMenu.addFolder("emmiter color")
+    emmiterColorMenu.add(laser.getComponent(LaserEmitterColor), "r", 0, 255).name("R")
+    emmiterColorMenu.add(laser.getComponent(LaserEmitterColor), "g", 0, 255).name("G")
+    emmiterColorMenu.add(laser.getComponent(LaserEmitterColor), "b", 0, 255).name("B")
+
+    const bodyColorMenu = laserMenu.addFolder("body color")
+    bodyColorMenu.add(laser.getComponent(LaserBodyColor), "r", 0, 255).name("R")
+    bodyColorMenu.add(laser.getComponent(LaserBodyColor), "g", 0, 255).name("G")
+    bodyColorMenu.add(laser.getComponent(LaserBodyColor), "b", 0, 255).name("B")
+
+    const headColorMenu = laserMenu.addFolder("head color")
+    headColorMenu.add(laser.getComponent(LaserHeadColor), "r", 0, 255).name("R")
+    headColorMenu.add(laser.getComponent(LaserHeadColor), "g", 0, 255).name("G")
+    headColorMenu.add(laser.getComponent(LaserHeadColor), "b", 0, 255).name("B")
   }
 }
 
