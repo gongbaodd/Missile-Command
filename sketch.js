@@ -34,12 +34,14 @@ class Ground {
 }
 
 class Cursor {
-  constructor(radius, space) {
+  constructor(radius, space, height) {
     this.radius = radius
     this.space = space
+    this.clickHight = height
   }
 }
 Cursor.mousePos = null
+Cursor.pressed = false
 
 class Color {
   constructor(r, g, b) {
@@ -105,6 +107,7 @@ class System {
 
               if (dist < cursor.space/2) {
                 fill(hoverColor.r, hoverColor.g, hoverColor.b)
+                cylinder(cursor.radius, cursor.clickHight * Cursor.mousePressedTime)
               }
 
               sphere(cursor.radius)
@@ -129,14 +132,14 @@ function setup() {
 
   const entities = []
   const ground = new Entity(IDs.ground)
-  ground.addComponent(new Ground(300))
+  ground.addComponent(new Ground(500))
   ground.addComponent(new Position(0, 300, 0))
   ground.addComponent(new Color(150, 200, 250))
   entities.push(ground)
   addGroundMenu(ground)
 
   const cursor = new Entity(IDs.cursor)
-  cursor.addComponent(new Cursor(6, 40))
+  cursor.addComponent(new Cursor(6, 60, 100))
   cursor.addComponent(new Position(0, 300, 0))
   cursor.addComponent(new Color(0, 0, 255))
   cursor.addComponent(new HoverColor(255, 0, 0))
@@ -152,7 +155,6 @@ function draw() {
     // orbitControl()
   }
   drawScene()
-
 }
 
 function windowResized() {
@@ -165,6 +167,8 @@ function drawScene() {
 }
 
 function mouseMoved() {
+  if (Cursor.pressed) return;
+
   // the default fovy is 2 * atan(height / 2 / 800). 800 is the camera's Z position
   const ground = system.entities.find(e => e.getComponent(Ground))
   const gPos = ground.getComponent(Position)
@@ -189,6 +193,14 @@ function mouseMoved() {
 
   const mousePos = p5.Vector.add(cameraPos, p5.Vector.mult(rayDir, t))
   Cursor.mousePos = mousePos
+}
+
+function mousePressed() {
+  Cursor.pressed = true
+}
+
+function mouseReleased() {
+  Cursor.pressed = false
 }
 
 function addGroundMenu(ground) {
