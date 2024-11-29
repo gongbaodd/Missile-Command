@@ -61,6 +61,8 @@ class System {
     this.entities = entities
   }
   update() {
+    addCursorDebugger()
+
     this.entities.forEach(entity => {
       if (entity.getComponent(Ground)) {
         const position = entity.getComponent(Position)
@@ -82,8 +84,6 @@ class System {
         const color = entity.getComponent(Color)
         const hoverColor = entity.getComponent(HoverColor)
 
-        addCursorDebugger()
-
         for (let x = -groundShape.radius; x < groundShape.radius; x += cursor.space) {
           for (let z = -groundShape.radius; z < groundShape.radius; z += cursor.space) {
             if (x * x + z * z <= groundShape.radius * groundShape.radius) {
@@ -103,7 +103,7 @@ class System {
 
               fill(color.r, color.g, color.b)
 
-              if (dist < cursor.radius) {
+              if (dist < cursor.space/2) {
                 fill(hoverColor.r, hoverColor.g, hoverColor.b)
               }
 
