@@ -75,7 +75,7 @@ class System {
         push()
         translate(position.x, position.y, position.z)
         fill(color.r, color.g, color.b)
-        cylinder(ground.radius, ground.height)
+        cylinder(ground.radius, ground.height, 100)
         pop()
       }// Ground
 
