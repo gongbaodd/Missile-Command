@@ -49,6 +49,18 @@ Ground.update = function (entity) {
     pop()
   }
 }
+function addGroundMenu(ground) {
+  if (DEV) {
+    const groundMenu = gui.addFolder("ground");
+    groundMenu.add(ground.getComponent(Ground), "radius", 300, 500).name("Radius")
+    const colorMenu = groundMenu.addFolder("color")
+    colorMenu.add(ground.getComponent(Color), "r", 0, 255).name("R")
+    colorMenu.add(ground.getComponent(Color), "g", 0, 255).name("G")
+    colorMenu.add(ground.getComponent(Color), "b", 0, 255).name("B")
+    const posMenu = groundMenu.addFolder("position")
+    posMenu.add(ground.getComponent(Position), "y", 0, 300).name("Y")
+  }
+}
 
 class Cursor {
   constructor(radius, space, height) {
@@ -120,6 +132,37 @@ Cursor.update = function (entity, sys) {
   }
 }
 
+function addCursorMenu(cursor) {
+  if (DEV) {
+    const cursorMenu = gui.addFolder("cursor")
+    cursorMenu.add(cursor.getComponent(Cursor), "radius", 5, 10).name("Radius")
+    cursorMenu.add(cursor.getComponent(Cursor), "space", 10, 50).name("Space")
+    const colorMenu = cursorMenu.addFolder("color")
+    colorMenu.add(cursor.getComponent(Color), "r", 0, 255).name("R")
+    colorMenu.add(cursor.getComponent(Color), "g", 0, 255).name("G")
+    colorMenu.add(cursor.getComponent(Color), "b", 0, 255).name("B")
+    const hoverMenu = cursorMenu.addFolder("hover color")
+    hoverMenu.add(cursor.getComponent(HoverColor), "r", 0, 255).name("R")
+    hoverMenu.add(cursor.getComponent(HoverColor), "g", 0, 255).name("G")
+    hoverMenu.add(cursor.getComponent(HoverColor), "b", 0, 255).name("B")
+  }
+}
+
+
+function addCursorDebugger() {
+  if (DEV) {
+    if (Cursor.mousePos) {
+      push()
+
+      translate(Cursor.mousePos.x, Cursor.mousePos.y, Cursor.mousePos.z)
+      fill(0, 255, 0)
+      sphere(5)
+
+      pop()
+    }
+  }
+}
+
 class Color {
   constructor(r, g, b) {
     this.r = r
@@ -132,10 +175,12 @@ class HoverColor extends Color { }
 class LaserHeadColor extends Color { }
 class LaserBodyColor extends Color { }
 class LaserEmitterColor extends Color { }
+class LaserColor extends Color { }
 
 class Laser {
-  constructor(size) {
+  constructor(size, speed) {
     this.size = size
+    this.speed = speed
   }
 }
 Laser.update = function (entity, sys) {
@@ -147,9 +192,9 @@ Laser.update = function (entity, sys) {
     const emmiterColor = entity.getComponent(LaserEmitterColor)
     const bodyColor = entity.getComponent(LaserBodyColor)
     const headColor = entity.getComponent(LaserHeadColor)
+    const color = entity.getComponent(LaserColor)
 
-    push()
-
+    /* refine the rotation calculation
     const { rotation } = {
       get rotation() {
         if (!Cursor.marker) {
@@ -160,7 +205,7 @@ Laser.update = function (entity, sys) {
           return false
         }
         // TODO: the calaculation is wrong the cone only rotates to front
-        const rotationCenter = createVector(position.x, groundPos.y - laser.size / 2, position.z)
+        const rotationCenter = createVector(position.x, groundPos.y - laser.size/1.5, position.z)
         const dx = Cursor.marker.x - rotationCenter.x
         const dy = Cursor.marker.y - rotationCenter.y
         const dz = Cursor.marker.z - rotationCenter.z
@@ -170,29 +215,44 @@ Laser.update = function (entity, sys) {
         const angleY = atan2(dx, dz)
         return createVector(angleX, angleY)
       }
-    }
+    }*/
 
+    const emitterPosition = createVector(position.x, groundPos.y - laser.size, position.z)
+
+    push()
     push() // <!--Cone Header
-    translate(position.x, groundPos.y, position.z)
+    translate(emitterPosition.x, emitterPosition.y, emitterPosition.z)
 
+    /*
     if (rotation) {
       rotateX(rotation.x)
       rotateY(rotation.y)
-    }
+    }*/
 
     fill(emmiterColor.r, emmiterColor.g, emmiterColor.b)
-    translate(0, -laser.size, 0)
-    cylinder(laser.size / 20, laser.size / 8)
-    
-    if (Cursor.marker && !Cursor.pressed) {
-      const dist = Cursor.marker.dist(createVector(position.x, groundPos.y - laser.size / 2, position.z))
-      cylinder(laser.size / 20, laser.size * Cursor.markerTime / 8)
+    cylinder(laser.size / 20, laser.size / 8)// emitter
 
-      if (dist < laser.size * Cursor.markerTime/8) { // TODO: bugs here marker position is not correct
+    if (Cursor.marker && !Cursor.pressed) {
+      const relativeMarker = p5.Vector.sub(Cursor.marker, emitterPosition)
+      const dist = relativeMarker.mag()
+      const totalTime = dist/laser.speed
+      const t = constrain(Cursor.markerTime / totalTime, 0, 1)
+
+      const x = lerp(0, relativeMarker.x, t)
+      const y = lerp(0, relativeMarker.y, t)
+      const z = lerp(0, relativeMarker.z, t)
+
+      push()
+      strokeWeight(2)
+      stroke(color.r, color.g, color.b)
+      line(0, 0, 0, x, y, z)
+      pop()
+
+      Cursor.markerTime += 1
+
+      if (t === 1) {
         Cursor.marker = null
         Cursor.markerTime = 0
-      } else {
-        Cursor.markerTime += 1
       }
     }
 
@@ -213,6 +273,39 @@ Laser.update = function (entity, sys) {
   }
 }
 
+
+
+function addLaserMenu(laser) {
+  if (DEV) {
+    const laserMenu = gui.addFolder("laser");
+    laserMenu.add(laser.getComponent(Laser), "size", 0, 200).name("Size")
+    laserMenu.add(laser.getComponent(Laser), "speed", 0, 10).name("Speed")
+
+    const posMenu = laserMenu.addFolder("position")
+    posMenu.add(laser.getComponent(Position), "x", -300, 300).name("X")
+    posMenu.add(laser.getComponent(Position), "z", -300, 300).name("Z")
+
+    const emmiterColorMenu = laserMenu.addFolder("emmiter color")
+    emmiterColorMenu.add(laser.getComponent(LaserEmitterColor), "r", 0, 255).name("R")
+    emmiterColorMenu.add(laser.getComponent(LaserEmitterColor), "g", 0, 255).name("G")
+    emmiterColorMenu.add(laser.getComponent(LaserEmitterColor), "b", 0, 255).name("B")
+
+    const bodyColorMenu = laserMenu.addFolder("body color")
+    bodyColorMenu.add(laser.getComponent(LaserBodyColor), "r", 0, 255).name("R")
+    bodyColorMenu.add(laser.getComponent(LaserBodyColor), "g", 0, 255).name("G")
+    bodyColorMenu.add(laser.getComponent(LaserBodyColor), "b", 0, 255).name("B")
+
+    const headColorMenu = laserMenu.addFolder("head color")
+    headColorMenu.add(laser.getComponent(LaserHeadColor), "r", 0, 255).name("R")
+    headColorMenu.add(laser.getComponent(LaserHeadColor), "g", 0, 255).name("G")
+    headColorMenu.add(laser.getComponent(LaserHeadColor), "b", 0, 255).name("B")
+
+    const laserColorMenu = laserMenu.addFolder("laser color")
+    laserColorMenu.add(laser.getComponent(LaserColor), "r", 0, 255).name("R")
+    laserColorMenu.add(laser.getComponent(LaserColor), "g", 0, 255).name("G")
+    laserColorMenu.add(laser.getComponent(LaserColor), "b", 0, 255).name("B")
+  }
+}
 
 const IDs = {
   "ground": 1,
@@ -261,11 +354,12 @@ function setup() {
   addCursorMenu(cursor)
 
   const laser = new Entity(IDs.laser)
-  laser.addComponent(new Laser(60))
-  laser.addComponent(new Position(100, 300, -300))
+  laser.addComponent(new Laser(60, 2))
+  laser.addComponent(new Position(300, 300, 20))
   laser.addComponent(new LaserHeadColor(150, 250, 150))
   laser.addComponent(new LaserBodyColor(0, 250, 150))
   laser.addComponent(new LaserEmitterColor(250, 150, 150))
+  laser.addComponent(new LaserColor(0, 255, 0))
   entities.push(laser)
   addLaserMenu(laser)
 
@@ -337,76 +431,6 @@ function addOrbitControlMenu() {
     gui.add(settings, "orbitControl").name("Orbit Control")
   }
 }
-
-function addGroundMenu(ground) {
-  if (DEV) {
-    const groundMenu = gui.addFolder("ground");
-    groundMenu.add(ground.getComponent(Ground), "radius", 300, 500).name("Radius")
-    const colorMenu = groundMenu.addFolder("color")
-    colorMenu.add(ground.getComponent(Color), "r", 0, 255).name("R")
-    colorMenu.add(ground.getComponent(Color), "g", 0, 255).name("G")
-    colorMenu.add(ground.getComponent(Color), "b", 0, 255).name("B")
-    const posMenu = groundMenu.addFolder("position")
-    posMenu.add(ground.getComponent(Position), "y", 0, 300).name("Y")
-  }
-}
-
-function addCursorMenu(cursor) {
-  if (DEV) {
-    const cursorMenu = gui.addFolder("cursor")
-    cursorMenu.add(cursor.getComponent(Cursor), "radius", 5, 10).name("Radius")
-    cursorMenu.add(cursor.getComponent(Cursor), "space", 10, 50).name("Space")
-    const colorMenu = cursorMenu.addFolder("color")
-    colorMenu.add(cursor.getComponent(Color), "r", 0, 255).name("R")
-    colorMenu.add(cursor.getComponent(Color), "g", 0, 255).name("G")
-    colorMenu.add(cursor.getComponent(Color), "b", 0, 255).name("B")
-    const hoverMenu = cursorMenu.addFolder("hover color")
-    hoverMenu.add(cursor.getComponent(HoverColor), "r", 0, 255).name("R")
-    hoverMenu.add(cursor.getComponent(HoverColor), "g", 0, 255).name("G")
-    hoverMenu.add(cursor.getComponent(HoverColor), "b", 0, 255).name("B")
-  }
-}
-
-function addLaserMenu(laser) {
-  if (DEV) {
-    const laserMenu = gui.addFolder("laser");
-    laserMenu.add(laser.getComponent(Laser), "size", 0, 200).name("Size")
-
-    const posMenu = laserMenu.addFolder("position")
-    posMenu.add(laser.getComponent(Position), "x", -300, 300).name("X")
-    posMenu.add(laser.getComponent(Position), "z", -300, 300).name("Z")
-
-    const emmiterColorMenu = laserMenu.addFolder("emmiter color")
-    emmiterColorMenu.add(laser.getComponent(LaserEmitterColor), "r", 0, 255).name("R")
-    emmiterColorMenu.add(laser.getComponent(LaserEmitterColor), "g", 0, 255).name("G")
-    emmiterColorMenu.add(laser.getComponent(LaserEmitterColor), "b", 0, 255).name("B")
-
-    const bodyColorMenu = laserMenu.addFolder("body color")
-    bodyColorMenu.add(laser.getComponent(LaserBodyColor), "r", 0, 255).name("R")
-    bodyColorMenu.add(laser.getComponent(LaserBodyColor), "g", 0, 255).name("G")
-    bodyColorMenu.add(laser.getComponent(LaserBodyColor), "b", 0, 255).name("B")
-
-    const headColorMenu = laserMenu.addFolder("head color")
-    headColorMenu.add(laser.getComponent(LaserHeadColor), "r", 0, 255).name("R")
-    headColorMenu.add(laser.getComponent(LaserHeadColor), "g", 0, 255).name("G")
-    headColorMenu.add(laser.getComponent(LaserHeadColor), "b", 0, 255).name("B")
-  }
-}
-
-function addCursorDebugger() {
-  if (DEV) {
-    if (Cursor.mousePos) {
-      push()
-
-      translate(Cursor.mousePos.x, Cursor.mousePos.y, Cursor.mousePos.z)
-      fill(0, 255, 0)
-      sphere(5)
-
-      pop()
-    }
-  }
-}
-
 
 function axisHelper(size = 32) {
   if (DEV) {
