@@ -61,7 +61,6 @@ class Cursor {
     this.clickHight = height
   }
 }
-Cursor.mousePos = null
 Cursor.pressed = false
 Cursor.pressedTime = 0
 Cursor.marker = null
@@ -85,10 +84,10 @@ function addCursorMenu(cursor) {
 
 function addCursorDebugger() {
   if (DEV) {
-    if (Cursor.mousePos) {
+    if (system.mousePos) {
       push()
 
-      translate(Cursor.mousePos.x, Cursor.mousePos.y, Cursor.mousePos.z)
+      translate(system.mousePos.x, system.mousePos.y, system.mousePos.z)
       fill(0, 255, 0)
       sphere(5)
 
@@ -162,6 +161,7 @@ class System {
     this.entities = entities
     this.guns = []
     this.markers = []
+    this.mousePos = null
   }
   update() {
     addCursorDebugger()
@@ -246,10 +246,10 @@ class System {
             const v = createVector(x, groundPos.y, z)
             const { dist } = {
               get dist() {
-                if (!Cursor.mousePos) {
+                if (!system.mousePos) {
                   return Infinity
                 }
-                return v.dist(Cursor.mousePos)
+                return v.dist(system.mousePos)
               }
             }
   
@@ -412,7 +412,7 @@ function mouseMoved() {
   let t = (planeY - cameraPos.y) / rayDir.y
 
   const mousePos = p5.Vector.add(cameraPos, p5.Vector.mult(rayDir, t))
-  Cursor.mousePos = mousePos
+  system.mousePos = mousePos
 }
 
 function mousePressed() {
