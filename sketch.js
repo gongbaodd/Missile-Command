@@ -157,8 +157,8 @@ const IDs = {
 class System {
   constructor(entities) {
     this.entities = entities
-    this.guns = []
-    this.markers = []
+    this.markers = [] // {pos, time, done}
+    this.tempMarker = null
     this.mousePos = null
     this.pressed = false
     this.pressedTime = 0
@@ -171,6 +171,9 @@ class System {
       this.updateLaser(entity)
     });
   }
+  addMarker(pos) {
+    this.markers.push({ pos, time: 0, done: false })
+  }
   updateLaser(entity) {
     if (entity.hasComponent(Laser)) {
       const ground = this.entities.find(entity => entity.id === IDs.ground)
@@ -181,53 +184,54 @@ class System {
       const bodyColor = entity.getComponent(LaserBodyColor)
       const headColor = entity.getComponent(LaserHeadColor)
       const color = entity.getComponent(LaserColor)
-  
+
       const emitterPosition = createVector(position.x, groundPos.y - laser.size, position.z)
-  
+
       push()
       push() // <!--Cone Header
       translate(emitterPosition.x, emitterPosition.y, emitterPosition.z)
       fill(emmiterColor.r, emmiterColor.g, emmiterColor.b)
       cylinder(laser.size / 20, laser.size / 8)// emitter
-  
-      if (Cursor.marker && !system.pressed) { // start shooting
-        const relativeMarker = p5.Vector.sub(Cursor.marker, emitterPosition)
+
+      this.markers = this.markers.map(m => {
+        if (this.pressed) return m
+        const { pos, time, done } = m
+        const marker = { pos, time, done }
+        const relativeMarker = p5.Vector.sub(pos, emitterPosition)
         const dist = relativeMarker.mag()
         const totalTime = dist / laser.speed
-        const t = constrain(Cursor.markerTime / totalTime, 0, 1)
-  
+        const t = constrain(time / totalTime, 0, 1)
+
         const x = lerp(0, relativeMarker.x, t)
         const y = lerp(0, relativeMarker.y, t)
         const z = lerp(0, relativeMarker.z, t)
-  
+
         push()
         strokeWeight(2)
         stroke(color.r, color.g, color.b)
         line(0, 0, 0, x, y, z)
         pop()
-  
-        Cursor.markerTime += 1
-  
-        if (t === 1) {
-          Cursor.marker = null
-          Cursor.markerTime = 0
-        }
-      }
-  
+
+        marker.time = time + 1
+        marker.done = t === 1
+
+        return marker
+      }).filter(marker => !marker.done)
+
       fill(headColor.r, headColor.g, headColor.b)
       translate(0, laser.size / 3, 0)
       cone(laser.size / 2, laser.size / 2)
-  
+
       pop() // Cone Header -->
-  
+
       const axis = createVector(1, 0, 0)
       rotate(PI, axis);
-  
+
       fill(bodyColor.r, bodyColor.g, bodyColor.b)
       translate(position.x, -groundPos.y + laser.size / 3.6, -position.z)
       cone(laser.size / 3, laser.size / 2)
       pop()
-  
+
     }
   }
   updateCursor(entity) {
@@ -238,7 +242,7 @@ class System {
       const cursor = entity.getComponent(Cursor)
       const color = entity.getComponent(Color)
       const hoverColor = entity.getComponent(HoverColor)
-  
+
       for (let x = -groundShape.radius; x < groundShape.radius; x += cursor.space) {
         for (let z = -groundShape.radius; z < groundShape.radius; z += cursor.space) {
           if (x * x + z * z <= groundShape.radius * groundShape.radius) {
@@ -252,15 +256,15 @@ class System {
                 return v.dist(system.mousePos)
               }
             }
-  
+
             push()
             translate(v.x, v.y, v.z)
-  
+
             fill(color.r, color.g, color.b)
-  
+
             if (dist < cursor.space / 2) {
               fill(hoverColor.r, hoverColor.g, hoverColor.b)
-  
+
               if (system.pressed) {
                 const ch = cursor.clickHight * system.pressedTime
                 push()
@@ -268,23 +272,23 @@ class System {
                 cylinder(cursor.radius, ch)
                 pop()
                 system.pressedTime += 1
-                Cursor.marker = v.add(createVector(0, -ch, 0))
+                this.tempMarker = p5.Vector.add(v, createVector(0, -ch, 0))
               }
             }
-  
+
             sphere(cursor.radius)
             pop()
           }
         }
       }
-  
-      if (Cursor.marker) {
+
+      this.markers.forEach(({ pos }) => {
         push()
-        translate(Cursor.marker.x, Cursor.marker.y, Cursor.marker.z)
+        translate(pos.x, pos.y, pos.z)
         fill(hoverColor.r, hoverColor.g, hoverColor.b)
         sphere(cursor.radius)
         pop()
-      }
+      })
     }
   }
   updateGround(entity) {
@@ -292,7 +296,7 @@ class System {
       const position = entity.getComponent(Position)
       const ground = entity.getComponent(Ground)
       const color = entity.getComponent(Color)
-  
+
       push()
       translate(position.x, position.y, position.z)
       fill(color.r, color.g, color.b)
@@ -325,7 +329,6 @@ function setup() {
   entities.push(cursor)
   addCursorMenu(cursor)
 
-  const guns = []
   const laser = new Entity(IDs.laser)
   laser.addComponent(new Laser(60, 2))
   laser.addComponent(new Position(300, 300, 20))
@@ -334,7 +337,6 @@ function setup() {
   laser.addComponent(new LaserEmitterColor(250, 150, 150))
   laser.addComponent(new LaserColor(0, 255, 0))
   entities.push(laser)
-  guns.push(laser)
   addLaserMenu(laser)
 
   const shooter = new Entity(IDs.shooter)
@@ -345,7 +347,6 @@ function setup() {
   shooter.addComponent(new LaserEmitterColor(250, 150, 150))
   shooter.addComponent(new LaserColor(0, 55, 255))
   entities.push(shooter)
-  guns.push(shooter)
   addLaserMenu(shooter, "shooter")
 
   const cannon = new Entity(IDs.cannon)
@@ -356,11 +357,9 @@ function setup() {
   cannon.addComponent(new LaserEmitterColor(250, 150, 150))
   cannon.addComponent(new LaserColor(255, 100, 100))
   entities.push(cannon)
-  guns.push(cannon)
   addLaserMenu(cannon, "cannon")
 
   const sys = new System(entities)
-  sys.guns = [...sys.guns, ...guns]
 
   system = sys
 }
@@ -422,6 +421,10 @@ function mousePressed() {
 function mouseReleased() {
   system.pressed = false
   system.pressedTime = 0
+  if (system.tempMarker) {
+    system.addMarker(system.tempMarker)
+    system.tempMarker = null
+  }
 }
 
 function addOrbitControlMenu() {
