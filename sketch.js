@@ -213,8 +213,6 @@ class System {
       cylinder(laser.size / 20, laser.size / 8)// emitter
 
       this.markers = this.markers.map(m => {
-        if (this.pressed) return m
-
         const { pos, time, done, gun } = m
         const marker = { pos, time, done, gun }
 
