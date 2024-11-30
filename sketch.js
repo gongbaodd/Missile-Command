@@ -5,6 +5,8 @@ const settings = {
   orbitControl: false,
   fontRegular: null,
 }
+const gui = new dat.GUI();
+let system
 
 class Entity {
   constructor(id) {
@@ -38,19 +40,7 @@ class Ground {
     this.height = 1
   }
 }
-Ground.update = function (entity) {
-  if (entity.hasComponent(Ground)) {
-    const position = entity.getComponent(Position)
-    const ground = entity.getComponent(Ground)
-    const color = entity.getComponent(Color)
 
-    push()
-    translate(position.x, position.y, position.z)
-    fill(color.r, color.g, color.b)
-    cylinder(ground.radius, ground.height, 100)
-    pop()
-  }
-}
 function addGroundMenu(ground) {
   if (DEV) {
     const groundMenu = gui.addFolder("ground");
@@ -76,63 +66,6 @@ Cursor.pressed = false
 Cursor.pressedTime = 0
 Cursor.marker = null
 Cursor.markerTime = 0
-Cursor.update = function (entity, sys) {
-  if (entity.hasComponent(Cursor)) {
-    const ground = sys.entities.find(entity => entity.id === IDs.ground)
-    const groundPos = ground.getComponent(Position)
-    const groundShape = ground.getComponent(Ground)
-    const cursor = entity.getComponent(Cursor)
-    const color = entity.getComponent(Color)
-    const hoverColor = entity.getComponent(HoverColor)
-
-    for (let x = -groundShape.radius; x < groundShape.radius; x += cursor.space) {
-      for (let z = -groundShape.radius; z < groundShape.radius; z += cursor.space) {
-        if (x * x + z * z <= groundShape.radius * groundShape.radius) {
-          // if in the ground
-          const v = createVector(x, groundPos.y, z)
-          const { dist } = {
-            get dist() {
-              if (!Cursor.mousePos) {
-                return Infinity
-              }
-              return v.dist(Cursor.mousePos)
-            }
-          }
-
-          push()
-          translate(v.x, v.y, v.z)
-
-          fill(color.r, color.g, color.b)
-
-          if (dist < cursor.space / 2) {
-            fill(hoverColor.r, hoverColor.g, hoverColor.b)
-
-            if (Cursor.pressed) {
-              const ch = cursor.clickHight * Cursor.pressedTime
-              push()
-              translate(0, -ch / 2, 0)
-              cylinder(cursor.radius, ch)
-              pop()
-              Cursor.pressedTime += 1
-              Cursor.marker = v.add(createVector(0, -ch, 0))
-            }
-          }
-
-          sphere(cursor.radius)
-          pop()
-        }
-      }
-    }
-
-    if (Cursor.marker) {
-      push()
-      translate(Cursor.marker.x, Cursor.marker.y, Cursor.marker.z)
-      fill(hoverColor.r, hoverColor.g, hoverColor.b)
-      sphere(cursor.radius)
-      pop()
-    }
-  }
-}
 
 function addCursorMenu(cursor) {
   if (DEV) {
@@ -149,7 +82,6 @@ function addCursorMenu(cursor) {
     hoverMenu.add(cursor.getComponent(HoverColor), "b", 0, 255).name("B")
   }
 }
-
 
 function addCursorDebugger() {
   if (DEV) {
@@ -185,68 +117,6 @@ class Laser {
     this.speed = speed
   }
 }
-Laser.update = function (entity, sys) {
-  if (entity.hasComponent(Laser)) {
-    const ground = sys.entities.find(entity => entity.id === IDs.ground)
-    const groundPos = ground.getComponent(Position)
-    const position = entity.getComponent(Position)
-    const laser = entity.getComponent(Laser)
-    const emmiterColor = entity.getComponent(LaserEmitterColor)
-    const bodyColor = entity.getComponent(LaserBodyColor)
-    const headColor = entity.getComponent(LaserHeadColor)
-    const color = entity.getComponent(LaserColor)
-
-    const emitterPosition = createVector(position.x, groundPos.y - laser.size, position.z)
-
-    push()
-    push() // <!--Cone Header
-    translate(emitterPosition.x, emitterPosition.y, emitterPosition.z)
-    fill(emmiterColor.r, emmiterColor.g, emmiterColor.b)
-    cylinder(laser.size / 20, laser.size / 8)// emitter
-
-    if (Cursor.marker && !Cursor.pressed) { // start shooting
-      const relativeMarker = p5.Vector.sub(Cursor.marker, emitterPosition)
-      const dist = relativeMarker.mag()
-      const totalTime = dist / laser.speed
-      const t = constrain(Cursor.markerTime / totalTime, 0, 1)
-
-      const x = lerp(0, relativeMarker.x, t)
-      const y = lerp(0, relativeMarker.y, t)
-      const z = lerp(0, relativeMarker.z, t)
-
-      push()
-      strokeWeight(2)
-      stroke(color.r, color.g, color.b)
-      line(0, 0, 0, x, y, z)
-      pop()
-
-      Cursor.markerTime += 1
-
-      if (t === 1) {
-        Cursor.marker = null
-        Cursor.markerTime = 0
-      }
-    }
-
-    fill(headColor.r, headColor.g, headColor.b)
-    translate(0, laser.size / 3, 0)
-    cone(laser.size / 2, laser.size / 2)
-
-    pop() // Cone Header -->
-
-    const axis = createVector(1, 0, 0)
-    rotate(PI, axis);
-
-    fill(bodyColor.r, bodyColor.g, bodyColor.b)
-    translate(position.x, -groundPos.y + laser.size / 3.6, -position.z)
-    cone(laser.size / 3, laser.size / 2)
-    pop()
-
-  }
-}
-
-
-
 function addLaserMenu(laser, title) {
   if (DEV) {
     const laserMenu = gui.addFolder(title ?? "laser");
@@ -290,20 +160,148 @@ const IDs = {
 class System {
   constructor(entities) {
     this.entities = entities
+    this.guns = []
+    this.markers = []
   }
   update() {
     addCursorDebugger()
     this.entities.forEach(entity => {
-      Ground.update(entity)
-      Cursor.update(entity, this)
-      Laser.update(entity, this)
+      this.updateGround(entity)
+      this.updateCursor(entity)
+      this.updateLaser(entity)
     });
+  }
+  updateLaser(entity) {
+    if (entity.hasComponent(Laser)) {
+      const ground = this.entities.find(entity => entity.id === IDs.ground)
+      const groundPos = ground.getComponent(Position)
+      const position = entity.getComponent(Position)
+      const laser = entity.getComponent(Laser)
+      const emmiterColor = entity.getComponent(LaserEmitterColor)
+      const bodyColor = entity.getComponent(LaserBodyColor)
+      const headColor = entity.getComponent(LaserHeadColor)
+      const color = entity.getComponent(LaserColor)
+  
+      const emitterPosition = createVector(position.x, groundPos.y - laser.size, position.z)
+  
+      push()
+      push() // <!--Cone Header
+      translate(emitterPosition.x, emitterPosition.y, emitterPosition.z)
+      fill(emmiterColor.r, emmiterColor.g, emmiterColor.b)
+      cylinder(laser.size / 20, laser.size / 8)// emitter
+  
+      if (Cursor.marker && !Cursor.pressed) { // start shooting
+        const relativeMarker = p5.Vector.sub(Cursor.marker, emitterPosition)
+        const dist = relativeMarker.mag()
+        const totalTime = dist / laser.speed
+        const t = constrain(Cursor.markerTime / totalTime, 0, 1)
+  
+        const x = lerp(0, relativeMarker.x, t)
+        const y = lerp(0, relativeMarker.y, t)
+        const z = lerp(0, relativeMarker.z, t)
+  
+        push()
+        strokeWeight(2)
+        stroke(color.r, color.g, color.b)
+        line(0, 0, 0, x, y, z)
+        pop()
+  
+        Cursor.markerTime += 1
+  
+        if (t === 1) {
+          Cursor.marker = null
+          Cursor.markerTime = 0
+        }
+      }
+  
+      fill(headColor.r, headColor.g, headColor.b)
+      translate(0, laser.size / 3, 0)
+      cone(laser.size / 2, laser.size / 2)
+  
+      pop() // Cone Header -->
+  
+      const axis = createVector(1, 0, 0)
+      rotate(PI, axis);
+  
+      fill(bodyColor.r, bodyColor.g, bodyColor.b)
+      translate(position.x, -groundPos.y + laser.size / 3.6, -position.z)
+      cone(laser.size / 3, laser.size / 2)
+      pop()
+  
+    }
+  }
+  updateCursor(entity) {
+    if (entity.hasComponent(Cursor)) {
+      const ground = this.entities.find(entity => entity.id === IDs.ground)
+      const groundPos = ground.getComponent(Position)
+      const groundShape = ground.getComponent(Ground)
+      const cursor = entity.getComponent(Cursor)
+      const color = entity.getComponent(Color)
+      const hoverColor = entity.getComponent(HoverColor)
+  
+      for (let x = -groundShape.radius; x < groundShape.radius; x += cursor.space) {
+        for (let z = -groundShape.radius; z < groundShape.radius; z += cursor.space) {
+          if (x * x + z * z <= groundShape.radius * groundShape.radius) {
+            // if in the ground
+            const v = createVector(x, groundPos.y, z)
+            const { dist } = {
+              get dist() {
+                if (!Cursor.mousePos) {
+                  return Infinity
+                }
+                return v.dist(Cursor.mousePos)
+              }
+            }
+  
+            push()
+            translate(v.x, v.y, v.z)
+  
+            fill(color.r, color.g, color.b)
+  
+            if (dist < cursor.space / 2) {
+              fill(hoverColor.r, hoverColor.g, hoverColor.b)
+  
+              if (Cursor.pressed) {
+                const ch = cursor.clickHight * Cursor.pressedTime
+                push()
+                translate(0, -ch / 2, 0)
+                cylinder(cursor.radius, ch)
+                pop()
+                Cursor.pressedTime += 1
+                Cursor.marker = v.add(createVector(0, -ch, 0))
+              }
+            }
+  
+            sphere(cursor.radius)
+            pop()
+          }
+        }
+      }
+  
+      if (Cursor.marker) {
+        push()
+        translate(Cursor.marker.x, Cursor.marker.y, Cursor.marker.z)
+        fill(hoverColor.r, hoverColor.g, hoverColor.b)
+        sphere(cursor.radius)
+        pop()
+      }
+    }
+  }
+  updateGround(entity) {
+    if (entity.hasComponent(Ground)) {
+      const position = entity.getComponent(Position)
+      const ground = entity.getComponent(Ground)
+      const color = entity.getComponent(Color)
+  
+      push()
+      translate(position.x, position.y, position.z)
+      fill(color.r, color.g, color.b)
+      cylinder(ground.radius, ground.height, 100)
+      pop()
+    }
   }
 }
 
-const gui = new dat.GUI();
-let system
-let angle = 0;
 
 function setup() {
   createCanvas(windowWidth, windowHeight, WEBGL)
@@ -327,6 +325,7 @@ function setup() {
   entities.push(cursor)
   addCursorMenu(cursor)
 
+  const guns = []
   const laser = new Entity(IDs.laser)
   laser.addComponent(new Laser(60, 2))
   laser.addComponent(new Position(300, 300, 20))
@@ -335,6 +334,7 @@ function setup() {
   laser.addComponent(new LaserEmitterColor(250, 150, 150))
   laser.addComponent(new LaserColor(0, 255, 0))
   entities.push(laser)
+  guns.push(laser)
   addLaserMenu(laser)
 
   const shooter = new Entity(IDs.shooter)
@@ -345,6 +345,7 @@ function setup() {
   shooter.addComponent(new LaserEmitterColor(250, 150, 150))
   shooter.addComponent(new LaserColor(0, 55, 255))
   entities.push(shooter)
+  guns.push(shooter)
   addLaserMenu(shooter, "shooter")
 
   const cannon = new Entity(IDs.cannon)
@@ -355,9 +356,12 @@ function setup() {
   cannon.addComponent(new LaserEmitterColor(250, 150, 150))
   cannon.addComponent(new LaserColor(255, 100, 100))
   entities.push(cannon)
+  guns.push(cannon)
   addLaserMenu(cannon, "cannon")
 
   const sys = new System(entities)
+  sys.guns = [...sys.guns, ...guns]
+
   system = sys
 }
 
