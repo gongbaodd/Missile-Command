@@ -157,11 +157,30 @@ const IDs = {
 class System {
   constructor(entities) {
     this.entities = entities
-    this.markers = [] // {pos, time, done}
+    this.markers = [] // {pos, time, done, gun: {id}}
     this.tempMarker = null
     this.mousePos = null
     this.pressed = false
     this.pressedTime = 0
+    this.isGunBusy = {
+      3: false,
+      4: false,
+      5: false
+    }
+  }
+  findNearestAvailableGun(markerPos) {
+    let distance = Infinity;
+    let result = null
+    Object.keys(this.isGunBusy).forEach(id => {
+      if (this.isGunBusy[id]) return
+      const gun = this.entities.find(entity => entity.id == id)
+      const {x, y, z} = gun.getComponent(Position)
+      const gDistance = p5.Vector.dist(createVector(x, y, z), markerPos)
+      distance = min(gDistance, distance)
+      if (distance === gDistance) result = gun
+    })
+
+    return result
   }
   update() {
     addCursorDebugger()
@@ -172,7 +191,7 @@ class System {
     });
   }
   addMarker(pos) {
-    this.markers.push({ pos, time: 0, done: false })
+    this.markers.push({ pos, time: 0, done: false, gun: null })
   }
   updateLaser(entity) {
     if (entity.hasComponent(Laser)) {
@@ -195,10 +214,25 @@ class System {
 
       this.markers = this.markers.map(m => {
         if (this.pressed) return m
-        const { pos, time, done } = m
-        const marker = { pos, time, done }
+
+        const { pos, time, done, gun } = m
+        const marker = { pos, time, done, gun }
+
+        if (!gun) {
+          const gun = this.findNearestAvailableGun(pos)
+          if (gun?.id !== entity.id) {
+            return m
+          } else {
+            this.isGunBusy[entity.id] = true
+            marker.gun = gun
+          }
+        }
+
+        if (marker.gun.id !== entity.id) return m
+
         const relativeMarker = p5.Vector.sub(pos, emitterPosition)
         const dist = relativeMarker.mag()
+
         const totalTime = dist / laser.speed
         const t = constrain(time / totalTime, 0, 1)
 
@@ -213,7 +247,11 @@ class System {
         pop()
 
         marker.time = time + 1
-        marker.done = t === 1
+
+        if (t===1) {
+          marker.done = true
+          this.isGunBusy[entity.id] = false
+        }
 
         return marker
       }).filter(marker => !marker.done)
