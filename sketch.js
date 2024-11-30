@@ -61,8 +61,6 @@ class Cursor {
     this.clickHight = height
   }
 }
-Cursor.pressed = false
-Cursor.pressedTime = 0
 Cursor.marker = null
 Cursor.markerTime = 0
 
@@ -162,6 +160,8 @@ class System {
     this.guns = []
     this.markers = []
     this.mousePos = null
+    this.pressed = false
+    this.pressedTime = 0
   }
   update() {
     addCursorDebugger()
@@ -190,7 +190,7 @@ class System {
       fill(emmiterColor.r, emmiterColor.g, emmiterColor.b)
       cylinder(laser.size / 20, laser.size / 8)// emitter
   
-      if (Cursor.marker && !Cursor.pressed) { // start shooting
+      if (Cursor.marker && !system.pressed) { // start shooting
         const relativeMarker = p5.Vector.sub(Cursor.marker, emitterPosition)
         const dist = relativeMarker.mag()
         const totalTime = dist / laser.speed
@@ -261,13 +261,13 @@ class System {
             if (dist < cursor.space / 2) {
               fill(hoverColor.r, hoverColor.g, hoverColor.b)
   
-              if (Cursor.pressed) {
-                const ch = cursor.clickHight * Cursor.pressedTime
+              if (system.pressed) {
+                const ch = cursor.clickHight * system.pressedTime
                 push()
                 translate(0, -ch / 2, 0)
                 cylinder(cursor.radius, ch)
                 pop()
-                Cursor.pressedTime += 1
+                system.pressedTime += 1
                 Cursor.marker = v.add(createVector(0, -ch, 0))
               }
             }
@@ -384,8 +384,8 @@ function drawScene() {
 }
 
 function mouseMoved() {
-  if (Cursor.pressed) return;
   if (!system) return;
+  if (system.pressed) return;
 
   // the default fovy is 2 * atan(height / 2 / 800). 800 is the camera's Z position
   const ground = system.entities.find(e => e.getComponent(Ground))
@@ -416,12 +416,12 @@ function mouseMoved() {
 }
 
 function mousePressed() {
-  Cursor.pressed = true
+  system.pressed = true
 }
 
 function mouseReleased() {
-  Cursor.pressed = false
-  Cursor.pressedTime = 0
+  system.pressed = false
+  system.pressedTime = 0
 }
 
 function addOrbitControlMenu() {
