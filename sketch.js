@@ -1,4 +1,6 @@
 const DEV = true
+const LASER_HEAD_DEV = true
+
 const settings = {
   orbitControl: false,
   fontRegular: null,
@@ -194,48 +196,24 @@ Laser.update = function (entity, sys) {
     const headColor = entity.getComponent(LaserHeadColor)
     const color = entity.getComponent(LaserColor)
 
-    /* refine the rotation calculation
-    const { rotation } = {
-      get rotation() {
-        if (!Cursor.marker) {
-          return null
-        }
-
-        if (Cursor.pressed) {// TODO: will be a bug with multiple markers
-          return false
-        }
-        // TODO: the calaculation is wrong the cone only rotates to front
-        const rotationCenter = createVector(position.x, groundPos.y - laser.size/1.5, position.z)
-        const dx = Cursor.marker.x - rotationCenter.x
-        const dy = Cursor.marker.y - rotationCenter.y
-        const dz = Cursor.marker.z - rotationCenter.z
-
-        const distXZ = sqrt(dx * dx + dz * dz)
-        const angleX = atan2(dy, distXZ)
-        const angleY = atan2(dx, dz)
-        return createVector(angleX, angleY)
-      }
-    }*/
-
     const emitterPosition = createVector(position.x, groundPos.y - laser.size, position.z)
 
     push()
     push() // <!--Cone Header
     translate(emitterPosition.x, emitterPosition.y, emitterPosition.z)
 
-    /*
-    if (rotation) {
-      rotateX(rotation.x)
-      rotateY(rotation.y)
-    }*/
+    push()
+    translate(0, laser.size * 8 / 15, 0) // rotation center
+    axisHelper(100)
+    pop()
 
     fill(emmiterColor.r, emmiterColor.g, emmiterColor.b)
     cylinder(laser.size / 20, laser.size / 8)// emitter
 
-    if (Cursor.marker && !Cursor.pressed) {
+    if (Cursor.marker && !Cursor.pressed) { // start shooting
       const relativeMarker = p5.Vector.sub(Cursor.marker, emitterPosition)
       const dist = relativeMarker.mag()
-      const totalTime = dist/laser.speed
+      const totalTime = dist / laser.speed
       const t = constrain(Cursor.markerTime / totalTime, 0, 1)
 
       const x = lerp(0, relativeMarker.x, t)
