@@ -61,6 +61,7 @@ Cursor.mousePos = null
 Cursor.pressed = false
 Cursor.pressedTime = 0
 Cursor.marker = null
+Cursor.markerTime = 0
 Cursor.update = function (entity, sys) {
   if (entity.hasComponent(Cursor)) {
     const ground = sys.entities.find(entity => entity.id === IDs.ground)
@@ -155,6 +156,9 @@ Laser.update = function (entity, sys) {
           return null
         }
 
+        if (Cursor.pressed) {// TODO: will be a bug with multiple markers
+          return false
+        }
         // TODO: the calaculation is wrong the cone only rotates to front
         const rotationCenter = createVector(position.x, groundPos.y - laser.size / 2, position.z)
         const dx = Cursor.marker.x - rotationCenter.x
@@ -179,7 +183,18 @@ Laser.update = function (entity, sys) {
     fill(emmiterColor.r, emmiterColor.g, emmiterColor.b)
     translate(0, -laser.size, 0)
     cylinder(laser.size / 20, laser.size / 8)
+    
+    if (Cursor.marker && !Cursor.pressed) {
+      const dist = Cursor.marker.dist(createVector(position.x, groundPos.y - laser.size / 2, position.z))
+      cylinder(laser.size / 20, laser.size * Cursor.markerTime / 8)
 
+      if (dist < laser.size * Cursor.markerTime/8) { // TODO: bugs here marker position is not correct
+        Cursor.marker = null
+        Cursor.markerTime = 0
+      } else {
+        Cursor.markerTime += 1
+      }
+    }
 
     fill(headColor.r, headColor.g, headColor.b)
     translate(0, laser.size / 3, 0)
