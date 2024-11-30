@@ -155,13 +155,26 @@ Laser.update = function (entity, sys) {
           return null
         }
 
-        // const dx = marker.x - position.x
+        // TODO: the calaculation is wrong the cone only rotates to front
+        const rotationCenter = createVector(position.x, groundPos.y - laser.size / 2, position.z)
+        const dx = Cursor.marker.x - rotationCenter.x
+        const dy = Cursor.marker.y - rotationCenter.y
+        const dz = Cursor.marker.z - rotationCenter.z
+
+        const distXZ = sqrt(dx * dx + dz * dz)
+        const angleX = atan2(dy, distXZ)
+        const angleY = atan2(dx, dz)
+        return createVector(angleX, angleY)
       }
     }
 
     push() // <!--Cone Header
     translate(position.x, groundPos.y, position.z)
 
+    if (rotation) {
+      rotateX(rotation.x)
+      rotateY(rotation.y)
+    }
 
     fill(emmiterColor.r, emmiterColor.g, emmiterColor.b)
     translate(0, -laser.size, 0)
@@ -171,7 +184,6 @@ Laser.update = function (entity, sys) {
     fill(headColor.r, headColor.g, headColor.b)
     translate(0, laser.size / 3, 0)
     cone(laser.size / 2, laser.size / 2)
-    axisHelper()
 
     pop() // Cone Header -->
 
@@ -235,7 +247,7 @@ function setup() {
 
   const laser = new Entity(IDs.laser)
   laser.addComponent(new Laser(60))
-  laser.addComponent(new Position(300, 300, 0))
+  laser.addComponent(new Position(100, 300, -300))
   laser.addComponent(new LaserHeadColor(150, 250, 150))
   laser.addComponent(new LaserBodyColor(0, 250, 150))
   laser.addComponent(new LaserEmitterColor(250, 150, 150))
