@@ -201,12 +201,6 @@ Laser.update = function (entity, sys) {
     push()
     push() // <!--Cone Header
     translate(emitterPosition.x, emitterPosition.y, emitterPosition.z)
-
-    push()
-    translate(0, laser.size * 8 / 15, 0) // rotation center
-    axisHelper(100)
-    pop()
-
     fill(emmiterColor.r, emmiterColor.g, emmiterColor.b)
     cylinder(laser.size / 20, laser.size / 8)// emitter
 
@@ -253,9 +247,9 @@ Laser.update = function (entity, sys) {
 
 
 
-function addLaserMenu(laser) {
+function addLaserMenu(laser, title) {
   if (DEV) {
-    const laserMenu = gui.addFolder("laser");
+    const laserMenu = gui.addFolder(title ?? "laser");
     laserMenu.add(laser.getComponent(Laser), "size", 0, 200).name("Size")
     laserMenu.add(laser.getComponent(Laser), "speed", 0, 10).name("Speed")
 
@@ -289,6 +283,8 @@ const IDs = {
   "ground": 1,
   "cursor": 2,
   "laser": 3,
+  "shooter": 4,
+  "cannon": 5
 }
 
 class System {
@@ -318,7 +314,7 @@ function setup() {
   const entities = []
   const ground = new Entity(IDs.ground)
   ground.addComponent(new Ground(330))
-  ground.addComponent(new Position(0, 300, 0))
+  ground.addComponent(new Position(0, 230, 0))
   ground.addComponent(new Color(150, 200, 250))
   entities.push(ground)
   addGroundMenu(ground)
@@ -340,6 +336,26 @@ function setup() {
   laser.addComponent(new LaserColor(0, 255, 0))
   entities.push(laser)
   addLaserMenu(laser)
+
+  const shooter = new Entity(IDs.shooter)
+  shooter.addComponent(new Laser(60, 2))
+  shooter.addComponent(new Position(-180, 300, 239))
+  shooter.addComponent(new LaserHeadColor(80, 200, 80))
+  shooter.addComponent(new LaserBodyColor(60, 150, 30))
+  shooter.addComponent(new LaserEmitterColor(250, 150, 150))
+  shooter.addComponent(new LaserColor(0, 55, 255))
+  entities.push(shooter)
+  addLaserMenu(shooter, "shooter")
+
+  const cannon = new Entity(IDs.cannon)
+  cannon.addComponent(new Laser(60, 2))
+  cannon.addComponent(new Position(-60, 300, -300))
+  cannon.addComponent(new LaserHeadColor(255, 180, 80))
+  cannon.addComponent(new LaserBodyColor(255, 80, 80))
+  cannon.addComponent(new LaserEmitterColor(250, 150, 150))
+  cannon.addComponent(new LaserColor(255, 100, 100))
+  entities.push(cannon)
+  addLaserMenu(cannon, "cannon")
 
   const sys = new System(entities)
   system = sys
