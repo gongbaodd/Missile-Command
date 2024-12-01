@@ -284,29 +284,41 @@ function addHousesMenu(houses) {
 }
 
 class Missiles {
-  constructor(num, w, h, radius=500) {
-    this.size = createVector(w, h)
+  constructor(num, size, radius=500, height=-800) {
+    this.size = size
+    this.height = height
     this.radius = radius
     this.missiles = Array.from(new Array(num)).map(_ => this.createMissile())
   }
   createMissile() {
-    const color = random(COLORS)
+    const color = random(COLORS).slice(0,7)
     const position = createVector(
       random(-this.radius, this.radius),
+      this.height,
       random(-this.radius, this.radius)
     )
     return {
       color,
-      position
+      position,
+      target: null,
+      startFrame: 0,
     }
+  }
+  setTarget(missile, vec) {
+    missile.target = vec
+  }
+  setFrameCount(missile, count) {
+    missile.startFrame = count;
   }
 }
 function addMissileMenu(missiles) {
   if(!DEV) return
 
   const menu = gui.addFolder("missiles")
-  const position = missiles.getComponent(Position)
-  menu.add(position, "y", -800, -300).name("Height")
+  const ms = missiles.getComponent(Missiles)
+  menu.add(ms, "size", 3, 50).name("size")
+  menu.add(ms, "radius", 300, 800).name("radius")
+  menu.add(ms, "height", -300, -800).name("height")
 }
 
 const IDs = {
@@ -527,15 +539,33 @@ class System {
   updateMissiles(entity) {
     if (!entity.hasComponent(Missiles)) return
 
-    const pos = entity.getComponent(Position)
     const mComponent = entity.getComponent(Missiles)
-    const ground = this.entities.find(e => e.id === IDs.ground)
+    const gComponent = this.entities.find(e => e.id === IDs.ground)
+    const gPos = gComponent.getComponent(Position)
+    const ground = gComponent.getComponent(Ground)
 
     mComponent.missiles.forEach(m => {
+      if (!m.target) {
+        const target = createVector(
+          random(-ground.radius, ground.radius),
+          gPos.y,
+          random(-ground.radius, ground.radius),
+        )
+        mComponent.setTarget(m, target)
+        mComponent.setFrameCount(m, frameCount)
+      }
+      const direction = p5.Vector.sub(m.target, m.position)
+
+      const t = min((frameCount-m.startFrame)/100, 1)
+      const x = lerp(0, direction.x, t)
+      const y = lerp(0, direction.y, t)
+      const z = lerp(0, direction.z, t)
+
       push()
       fill(m.color)
-      translate(m.position.x, pos.y, m.position.y)
-      ellipsoid(mComponent.size.x, mComponent.size.y)
+      translate(m.position.x, m.position.y, m.position.z)
+      translate(x, y, z)
+      sphere(mComponent.size)
       pop()
     })
   }
@@ -600,8 +630,7 @@ function setup() {
   addHousesMenu(houses)
 
   const missiles = new Entity(IDs)
-  missiles.addComponent(new Missiles(10, 15, 30))
-  missiles.addComponent(new Position(0, -300, 0))
+  missiles.addComponent(new Missiles(10, 15, 500, -800))
   entities.push(missiles)
   addMissileMenu(missiles)
 
