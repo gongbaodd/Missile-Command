@@ -262,9 +262,21 @@ function addHousesMenu(houses) {
     let i = 1
     for (const hs of hComponent.houses) {
       const menu = housesMenu.addFolder("house - " + i)
-      menu.add(hs.size, "x", 10, 100).name("X Width")
-      menu.add(hs.size, "y", 50, 200).name("Y Height")
-      menu.add(hs.size, "z", 10, 100).name("Z Width")
+      
+      const sizeMenu = menu.addFolder("size")
+      sizeMenu.add(hs.size, "x", 10, 100).name("X Width")
+      sizeMenu.add(hs.size, "y", 50, 200).name("Y Height")
+      sizeMenu.add(hs.size, "z", 10, 100).name("Z Width")
+
+      const posMenu = menu.addFolder("position")
+      posMenu.add(hs.pos, "x", -300, 300).name("X")
+      posMenu.add(hs.pos, "y", -300, 300).name("Y")
+      posMenu.add(hs.pos, "z", -300, 300).name("Z")
+
+      menu.addColor({color: hs.color.slice(0, 7)}, "color").name("color").onChange((newColor) => {
+        hs.color = newColor + hs.color.slice(7)
+      });
+
       i++
     }
   }
