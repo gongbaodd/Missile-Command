@@ -284,16 +284,22 @@ function addHousesMenu(houses) {
 }
 
 class Missiles {
-  constructor(size, radius=500, height=-800, interval=2000) {
+  constructor(size, radius=500, height=-800, interval=2000, speed=0.001) {
     this.size = size
     this.height = height
     this.radius = radius
     this.missiles = []
     this.interval = interval
+    this.speed = speed
 
-    setInterval(() => {
+    let timeout
+    const missileInterval = () => {
       this.missiles.push(this.createMissile())
-    }, interval)
+      timeout && clearTimeout(timeout)
+      timeout = setTimeout(missileInterval, interval)
+    }
+
+    missileInterval()
   }
   createMissile() {
     const color = random(COLORS).slice(0,7)
@@ -329,6 +335,7 @@ function addMissileMenu(missiles) {
   menu.add(ms, "radius", 300, 800).name("radius")
   menu.add(ms, "height", -300, -800).name("height")
   menu.add(ms, "interval", 500, 5000).name("interval")
+  menu.add(ms, "speed", 0.0001, 0.01).name("speed")
 }
 
 const IDs = {
@@ -566,7 +573,7 @@ class System {
       }
       const direction = p5.Vector.sub(m.target, m.position)
 
-      const t = min((frameCount-m.startFrame)/1000, 1)
+      const t = min((frameCount-m.startFrame)*mComponent.speed, 1)
       const x = lerp(0, direction.x, t)
       const y = lerp(0, direction.y, t)
       const z = lerp(0, direction.z, t)
@@ -646,7 +653,7 @@ function setup() {
   addHousesMenu(houses)
 
   const missiles = new Entity(IDs)
-  missiles.addComponent(new Missiles(15, 500, -500))
+  missiles.addComponent(new Missiles(15, 500, -500, 1000))
   entities.push(missiles)
   addMissileMenu(missiles)
 
