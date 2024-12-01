@@ -1,6 +1,20 @@
 const DEV = true
 const LASER_HEAD_DEV = true
 
+const COLORS = [
+  '#FF57337F', // Bright Red-Orange
+  '#33FF577F', // Bright Green
+  '#5733FF7F', // Vibrant Blue-Purple
+  '#FFD7007F', // Gold
+  '#FF69B47F', // Hot Pink
+  '#00CED17F', // Dark Turquoise
+  '#FFA5007F', // Orange
+  '#8A2BE27F', // Blue Violet
+  '#228B227F', // Forest Green
+  '#FF45007F'  // Orange Red
+]
+
+
 const settings = {
   orbitControl: false,
   fontRegular: null,
@@ -148,26 +162,13 @@ function addLaserMenu(laser, title) {
 
 class Houses {
   constructor(num, minH, maxH, minW, maxW) {
-    const colors = [
-      '#FF57337F', // Bright Red-Orange
-      '#33FF577F', // Bright Green
-      '#5733FF7F', // Vibrant Blue-Purple
-      '#FFD7007F', // Gold
-      '#FF69B47F', // Hot Pink
-      '#00CED17F', // Dark Turquoise
-      '#FFA5007F', // Orange
-      '#8A2BE27F', // Blue Violet
-      '#228B227F', // Forest Green
-      '#FF45007F'  // Orange Red
-    ]
-
     this.radius = 330
     this.num = num
-    const houses = Array.from(new Array(num)).map(house => {
+    const houses = Array.from(new Array(num)).map(_ => {
       const width = random(minW, maxW)
       const height = random(minH, maxH)
       const size = createVector(width, height, width)
-      const color = random(colors)
+      const color = random(COLORS)
 
       return { size, pos: null, color}
     })
