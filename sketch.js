@@ -148,15 +148,109 @@ function addLaserMenu(laser, title) {
 
 class Houses {
   constructor(num, minH, maxH, minW, maxW) {
-    this.num = num
-    this.houses = []// {size}
+    const colors = [
+      '#FF57337F', // Bright Red-Orange
+      '#33FF577F', // Bright Green
+      '#5733FF7F', // Vibrant Blue-Purple
+      '#FFD7007F', // Gold
+      '#FF69B47F', // Hot Pink
+      '#00CED17F', // Dark Turquoise
+      '#FFA5007F', // Orange
+      '#8A2BE27F', // Blue Violet
+      '#228B227F', // Forest Green
+      '#FF45007F'  // Orange Red
+    ]
 
-    for (let i = 0; i < num; i ++) {
+    this.radius = 330
+    this.num = num
+    const houses = Array.from(new Array(num)).map(house => {
       const width = random(minW, maxW)
       const height = random(minH, maxH)
       const size = createVector(width, height, width)
-      this.houses.push({size})
+      const color = random(colors)
+
+      return { size, pos: null, color}
+    })
+    this.houses = houses
+
+    for (let house of houses) {
+      let position = this.placeHouse(house.size)
+      if (position) {
+        house.pos = position
+      } else {
+        console.warn("Failed to place a house:", house)
+      }
     }
+
+    this.houses = houses.filter(h => !!h.pos)
+  }
+
+  isValidPlacement(pos, size) {
+    // Check if the house is fully inside the circle
+    let corners = [
+      createVector(pos.x - size.x / 2, pos.y - size.y / 2),
+      createVector(pos.x + size.x / 2, pos.y - size.y / 2),
+      createVector(pos.x - size.x / 2, pos.y + size.y / 2),
+      createVector(pos.x + size.x / 2, pos.y + size.y / 2),
+    ]
+
+    for (let corner of corners) {
+      if (dist(corner.x, corner.y, 0, 0) > this.radius) {
+        return false // Corner is outside the circle
+      }
+    }
+
+    // Check for overlap with other houses
+    for (let house of this.houses) {
+      if (house.pos) {
+        let otherCorners = [
+          createVector(
+            house.pos.x - house.size.x / 2,
+            house.pos.y - house.size.y / 2
+          ),
+          createVector(
+            house.pos.x + house.size.x / 2,
+            house.pos.y - house.size.y / 2
+          ),
+          createVector(
+            house.pos.x - house.size.x / 2,
+            house.pos.y + house.size.y / 2
+          ),
+          createVector(
+            house.pos.x + house.size.x / 2,
+            house.pos.y + house.size.y / 2
+          ),
+        ]
+        for (let c1 of corners) {
+          for (let c2 of otherCorners) {
+            if (abs(c1.x - c2.x) < size.x && abs(c1.y - c2.y) < size.y) {
+              return false // Corners overlap
+            }
+          }
+        }
+      }
+    }
+
+    return true
+  }
+
+  placeHouse(size) {
+    let maxAttempts = 1000
+    while (maxAttempts > 0) {
+      let angle = random(TWO_PI)
+      let distance = random(0, this.radius - max(size.x, size.y) / 2)
+      let x = cos(angle) * distance
+      let y = sin(angle) * distance
+      let position = createVector(x, y)
+
+      if (this.isValidPlacement(position, size)) {
+        return position // Return the valid position
+      }
+
+      maxAttempts--
+    }
+
+    return null // Failed to place the house after many attempts
   }
 }
 
@@ -375,13 +469,16 @@ class System {
     const hComponent = entity.getComponent(Houses)
     const ground = this.entities.find(e => e.id === IDs.ground)
     const groundPos = ground.getComponent(Position)
+    const groundRadius = ground.getComponent(Ground).radius
+    const delta = hComponent.radius / groundRadius
 
     hComponent.houses.forEach(house => {
-      const { size } = house
+      const { size, pos, color } = house
       push()
       stroke(0, 0, 0)
       strokeWeight(2)
-      translate(0, groundPos.y, 0)
+      fill(color)
+      translate(pos.x * delta, groundPos.y - size.y/2, pos.y * delta)
       box(size.x, size.y, size.z)
       pop()
     })
@@ -442,7 +539,7 @@ function setup() {
   addLaserMenu(cannon, "cannon")
 
   const houses = new Entity(IDs.houses)
-  houses.addComponent(new Houses(5, 50, 200, 10, 100))
+  houses.addComponent(new Houses(10, 50, 200, 10, 100))
   entities.push(houses)
   addHousesMenu(houses)
 
