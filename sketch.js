@@ -283,6 +283,32 @@ function addHousesMenu(houses) {
   }
 }
 
+class Missiles {
+  constructor(num, w, h, radius=500) {
+    this.size = createVector(w, h)
+    this.radius = radius
+    this.missiles = Array.from(new Array(num)).map(_ => this.createMissile())
+  }
+  createMissile() {
+    const color = random(COLORS)
+    const position = createVector(
+      random(-this.radius, this.radius),
+      random(-this.radius, this.radius)
+    )
+    return {
+      color,
+      position
+    }
+  }
+}
+function addMissileMenu(missiles) {
+  if(!DEV) return
+
+  const menu = gui.addFolder("missiles")
+  const position = missiles.getComponent(Position)
+  menu.add(position, "y", -800, -300).name("Height")
+}
+
 const IDs = {
   "ground": 1,
   "cursor": 2,
@@ -290,6 +316,7 @@ const IDs = {
   "shooter": 4,
   "cannon": 5,
   "houses": 6,
+  "missiles": 7
 }
 
 class System {
@@ -327,6 +354,7 @@ class System {
       this.updateCursor(entity)
       this.updateLaser(entity)
       this.updateHouses(entity)
+      this.updateMissiles(entity)
     });
   }
   addMarker(pos) {
@@ -496,6 +524,21 @@ class System {
       pop()
     })
   }
+  updateMissiles(entity) {
+    if (!entity.hasComponent(Missiles)) return
+
+    const pos = entity.getComponent(Position)
+    const mComponent = entity.getComponent(Missiles)
+    const ground = this.entities.find(e => e.id === IDs.ground)
+
+    mComponent.missiles.forEach(m => {
+      push()
+      fill(m.color)
+      translate(m.position.x, pos.y, m.position.y)
+      ellipsoid(mComponent.size.x, mComponent.size.y)
+      pop()
+    })
+  }
 }
 
 
@@ -556,8 +599,13 @@ function setup() {
   entities.push(houses)
   addHousesMenu(houses)
 
-  const sys = new System(entities)
+  const missiles = new Entity(IDs)
+  missiles.addComponent(new Missiles(10, 15, 30))
+  missiles.addComponent(new Position(0, -300, 0))
+  entities.push(missiles)
+  addMissileMenu(missiles)
 
+  const sys = new System(entities)
   system = sys
 }
 
