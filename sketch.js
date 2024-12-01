@@ -284,11 +284,16 @@ function addHousesMenu(houses) {
 }
 
 class Missiles {
-  constructor(num, size, radius=500, height=-800) {
+  constructor(size, radius=500, height=-800, interval=2000) {
     this.size = size
     this.height = height
     this.radius = radius
-    this.missiles = Array.from(new Array(num)).map(_ => this.createMissile())
+    this.missiles = []
+    this.interval = interval
+
+    setInterval(() => {
+      this.missiles.push(this.createMissile())
+    }, interval)
   }
   createMissile() {
     const color = random(COLORS).slice(0,7)
@@ -302,13 +307,17 @@ class Missiles {
       position,
       target: null,
       startFrame: 0,
+      active: true
     }
   }
   setTarget(missile, vec) {
     missile.target = vec
   }
   setFrameCount(missile, count) {
-    missile.startFrame = count;
+    missile.startFrame = count
+  }
+  destroy(missile) {
+    missile.active = false
   }
 }
 function addMissileMenu(missiles) {
@@ -319,6 +328,7 @@ function addMissileMenu(missiles) {
   menu.add(ms, "size", 3, 50).name("size")
   menu.add(ms, "radius", 300, 800).name("radius")
   menu.add(ms, "height", -300, -800).name("height")
+  menu.add(ms, "interval", 500, 5000).name("interval")
 }
 
 const IDs = {
@@ -556,7 +566,7 @@ class System {
       }
       const direction = p5.Vector.sub(m.target, m.position)
 
-      const t = min((frameCount-m.startFrame)/100, 1)
+      const t = min((frameCount-m.startFrame)/1000, 1)
       const x = lerp(0, direction.x, t)
       const y = lerp(0, direction.y, t)
       const z = lerp(0, direction.z, t)
@@ -567,7 +577,13 @@ class System {
       translate(x, y, z)
       sphere(mComponent.size)
       pop()
+
+      if (t === 1) {
+        mComponent.destroy(m)
+      }
     })
+
+    mComponent.missiles = mComponent.missiles.filter(m => m.active)
   }
 }
 
@@ -630,7 +646,7 @@ function setup() {
   addHousesMenu(houses)
 
   const missiles = new Entity(IDs)
-  missiles.addComponent(new Missiles(10, 15, 500, -800))
+  missiles.addComponent(new Missiles(15, 500, -500))
   entities.push(missiles)
   addMissileMenu(missiles)
 
