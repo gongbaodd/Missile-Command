@@ -301,6 +301,21 @@ class Missiles {
 
     missileInterval()
   }
+  isHitingBuilding(missile, house) {
+    const { size, pos } = house
+    const { position } = missile
+    const r = this.size
+
+    const closestX = constrain(position.x, pos.x - size.x/2, pos.x + size.x/2)
+    const closestY = constrain(position.y, pos.y - size.y/2, pos.y + size.y/2)
+    const closestZ = constrain(position.z, pos.z - size.x/2, pos.z + size.x/2)
+
+    const distX = position.x - closestX
+    const distY = position.y - closestY
+    const distZ = position.z - closestZ
+
+    return distX*distX + distY*distY + distZ*distZ <= r*r
+  }
   createMissile() {
     const color = random(COLORS).slice(0,7)
     const position = createVector(
@@ -557,9 +572,11 @@ class System {
     if (!entity.hasComponent(Missiles)) return
 
     const mComponent = entity.getComponent(Missiles)
-    const gComponent = this.entities.find(e => e.id === IDs.ground)
-    const gPos = gComponent.getComponent(Position)
-    const ground = gComponent.getComponent(Ground)
+    const gEntity = this.entities.find(e => e.id === IDs.ground)
+    const hEntity = this.entities.find(e => e.id === IDs.houses)
+    const hComponent = hEntity.getComponent(Houses)
+    const gPos = gEntity.getComponent(Position)
+    const ground = gEntity.getComponent(Ground)
 
     mComponent.missiles.forEach(m => {
       if (!m.target) {
@@ -577,6 +594,12 @@ class System {
       const x = lerp(0, direction.x, t)
       const y = lerp(0, direction.y, t)
       const z = lerp(0, direction.z, t)
+
+      hComponent.houses.forEach(house => {
+        if(mComponent.isHitingBuilding(m, house)) {
+          console.log("hit")
+        }
+      })
 
       push()
       fill(m.color)
