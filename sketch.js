@@ -304,18 +304,19 @@ class Missiles {
 
     let timeout
     const missileInterval = () => {
-      const {testMissile} = {
+      const { testMissile } = {
         get testMissile() {
           if (!DEV) return null
           return {
             color: COLORS[1],
-            position: createVector(0, this.height, 0),
+            position: createVector(0, height, 0),
             target: createVector(0, 230, 0),
             startFrame: frameCount,
             active: true
           }
         }
       }
+
 
       // this.missiles.push(this.createMissile())
       testMissile && this.missiles.push(testMissile)
@@ -326,19 +327,56 @@ class Missiles {
 
     missileInterval()
   }
-  isHitingBuilding(missile, house) {
+  isHitingBuilding(missile, house, houseY) {
     const { size, pos } = house
     const { position } = missile
     const r = this.size
 
-    const closestX = constrain(position.x, pos.x - size.x/2, pos.x + size.x/2)
-    const closestY = constrain(position.y, pos.y, pos.y + size.y/2)
-    const closestZ = constrain(position.z, pos.z - size.x/2, pos.z + size.x/2)
+    const mX = position.x
+    const mY = position.y
+    const mZ = position.z
+
+    const hLX = pos.x - size.x / 2
+    const hRX = pos.x + size.x / 2
+    const hBY = houseY
+    const hTY = houseY - size.y
+    const hFZ = pos.y - size.z / 2
+    const hBZ = pos.y + size.z / 2
+
+
+
+    const closestX = constrain(mX, hLX, hRX)
+    const closestY = constrain(mY, hTY, hBY)
+    const closestZ = constrain(mZ, hFZ, hBZ)
     const distX = position.x - closestX
     const distY = position.y - closestY
     const distZ = position.z - closestZ
 
-    const isHiting = distX*distX + distY*distY + distZ*distZ <= r*r
+    const isHiting = distX * distX + distY * distY + distZ * distZ <= r * r
+
+    if (isHiting) {
+      console.table({
+        mX, mY, mZ, hLX, hRX, hBY, hTY, hFZ, hBZ
+      })
+      /**
+       * TODO
+       * 
+       * 
+{
+    "mX": 0,
+    "mY": 20.49000000000001,
+    "mZ": 0,
+    "hLX": -50,
+    "hRX": 50,
+    "hBY": 230,
+    "hTY": 30,
+    "hFZ": -50,
+    "hBZ": 50
+}
+       */
+
+      throw "hit"
+    }
 
     return isHiting
   }
@@ -622,9 +660,17 @@ class System {
       const z = lerp(0, direction.z, t)
 
       hComponent.houses.forEach(house => {
-        if(mComponent.isHitingBuilding(m, house)) {
-          // TODO: 
-          // console.log("hit")
+        const position = createVector(x, y, z).add(m.position)
+        if(mComponent.isHitingBuilding({ position }, house, gPos.y)) {
+          push()
+          translate(position.x, position.y, position.z)
+          axisHelper()
+          pop()
+
+          push()
+          translate(house.pos.x, gPos.y, house.pos.y)
+          axisHelper(100)
+          pop()
         }
       })
 
