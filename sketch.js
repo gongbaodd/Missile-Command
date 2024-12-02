@@ -302,9 +302,23 @@ class Missiles {
     this.interval = interval
     this.speed = speed
 
+    const {testMissile} = {
+      get testMissile() {
+        if (!DEV) return null
+        return {
+          color: COLORS[1],
+          position: createVector(0, this.height, 0),
+          target: createVector(0, 230, 0),
+          startFrame: 0,
+          active: true
+        }
+      }
+    }
+
     let timeout
     const missileInterval = () => {
       this.missiles.push(this.createMissile())
+      testMissile && this.missiles.push(testMissile)
       timeout && clearTimeout(timeout)
       timeout = setTimeout(missileInterval, interval)
     }
@@ -518,7 +532,7 @@ class System {
 
           fill(color.r, color.g, color.b)
 
-          if (dist < cursor.space / 2) {
+          if (dist < cursor.space / 1.9) {
             fill(hoverColor.r, hoverColor.g, hoverColor.b)
 
             if (system.pressed) {
@@ -607,7 +621,7 @@ class System {
 
       hComponent.houses.forEach(house => {
         if(mComponent.isHitingBuilding(m, house)) {
-          console.log("hit")
+          // console.log("hit")
         }
       })
 
@@ -651,7 +665,7 @@ function setup() {
   addCursorMenu(cursor)
 
   const laser = new Entity(IDs.laser)
-  laser.addComponent(new Laser(60, 2))
+  laser.addComponent(new Laser(60, 6))
   laser.addComponent(new Position(300, 300, 20))
   laser.addComponent(new LaserHeadColor(150, 250, 150))
   laser.addComponent(new LaserBodyColor(0, 250, 150))
@@ -686,7 +700,7 @@ function setup() {
   addHousesMenu(houses)
 
   const missiles = new Entity(IDs)
-  missiles.addComponent(new Missiles(15, 500, -500, 1000))
+  missiles.addComponent(new Missiles(10, 500, -500, 1000))
   entities.push(missiles)
   addMissileMenu(missiles)
 
