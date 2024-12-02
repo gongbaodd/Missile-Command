@@ -164,29 +164,39 @@ class Houses {
   constructor(num, minH, maxH, minW, maxW) {
     this.radius = 330
     this.num = num
-    const houses = Array.from(new Array(num)).map(_ => {
+    const createHouse = () => {
       const width = random(minW, maxW)
       const height = random(minH, maxH)
       const size = createVector(width, height, width)
       const color = random(COLORS)
 
       return { size, pos: null, color}
-    })
-    this.houses = houses
-
-    for (let house of houses) {
-      let position = this.placeHouse(house.size)
-      if (position) {
-        house.pos = position
-      } else {
-        console.warn("Failed to place a house:", house)
-      }
     }
 
-    this.houses = houses.filter(h => !!h.pos)
+    const houses = Array.from(new Array(num))
+      .map(createHouse)
+      .concat({ // test building
+        size: createVector(100, 200, 100),
+        pos: createVector(0, 0),
+        color: COLORS[0]
+      })
+
+    this.houses = houses.map(h => {
+      if (h.pos) return h
+
+      const position = this.placeHouse(h.size, houses)
+      if (position) {
+        h.pos = position
+      } else {
+        console.warn("Failed to place a house:", h)
+      }
+
+      return h
+    }).filter(h => !!h.pos)
+
   }
 
-  isValidPlacement(pos, size) {
+  isValidPlacement(pos, size, houses) {
     // Check if the house is fully inside the circle
     let corners = [
       createVector(pos.x - size.x / 2, pos.y - size.y / 2),
@@ -202,7 +212,7 @@ class Houses {
     }
 
     // Check for overlap with other houses
-    for (let house of this.houses) {
+    for (let house of houses) {
       if (house.pos) {
         let otherCorners = [
           createVector(
@@ -235,7 +245,7 @@ class Houses {
     return true
   }
 
-  placeHouse(size) {
+  placeHouse(size, houses) {
     let maxAttempts = 1000
     while (maxAttempts > 0) {
       let angle = random(TWO_PI)
@@ -244,7 +254,7 @@ class Houses {
       let y = sin(angle) * distance
       let position = createVector(x, y)
 
-      if (this.isValidPlacement(position, size)) {
+      if (this.isValidPlacement(position, size, houses)) {
         return position // Return the valid position
       }
 
