@@ -302,23 +302,24 @@ class Missiles {
     this.interval = interval
     this.speed = speed
 
-    const {testMissile} = {
-      get testMissile() {
-        if (!DEV) return null
-        return {
-          color: COLORS[1],
-          position: createVector(0, this.height, 0),
-          target: createVector(0, 230, 0),
-          startFrame: 0,
-          active: true
-        }
-      }
-    }
-
     let timeout
     const missileInterval = () => {
-      this.missiles.push(this.createMissile())
+      const {testMissile} = {
+        get testMissile() {
+          if (!DEV) return null
+          return {
+            color: COLORS[1],
+            position: createVector(0, this.height, 0),
+            target: createVector(0, 230, 0),
+            startFrame: frameCount,
+            active: true
+          }
+        }
+      }
+
+      // this.missiles.push(this.createMissile())
       testMissile && this.missiles.push(testMissile)
+
       timeout && clearTimeout(timeout)
       timeout = setTimeout(missileInterval, interval)
     }
@@ -333,12 +334,13 @@ class Missiles {
     const closestX = constrain(position.x, pos.x - size.x/2, pos.x + size.x/2)
     const closestY = constrain(position.y, pos.y, pos.y + size.y/2)
     const closestZ = constrain(position.z, pos.z - size.x/2, pos.z + size.x/2)
-
     const distX = position.x - closestX
     const distY = position.y - closestY
     const distZ = position.z - closestZ
 
-    return distX*distX + distY*distY + distZ*distZ <= r*r
+    const isHiting = distX*distX + distY*distY + distZ*distZ <= r*r
+
+    return isHiting
   }
   createMissile() {
     const color = random(COLORS)
@@ -621,6 +623,7 @@ class System {
 
       hComponent.houses.forEach(house => {
         if(mComponent.isHitingBuilding(m, house)) {
+          // TODO: 
           // console.log("hit")
         }
       })
