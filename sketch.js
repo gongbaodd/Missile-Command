@@ -307,7 +307,7 @@ class Missiles {
     const r = this.size
 
     const closestX = constrain(position.x, pos.x - size.x/2, pos.x + size.x/2)
-    const closestY = constrain(position.y, pos.y - size.y/2, pos.y + size.y/2)
+    const closestY = constrain(position.y, pos.y, pos.y + size.y/2)
     const closestZ = constrain(position.z, pos.z - size.x/2, pos.z + size.x/2)
 
     const distX = position.x - closestX
@@ -317,7 +317,7 @@ class Missiles {
     return distX*distX + distY*distY + distZ*distZ <= r*r
   }
   createMissile() {
-    const color = random(COLORS).slice(0,7)
+    const color = random(COLORS)
     const position = createVector(
       random(-this.radius, this.radius),
       this.height,
