@@ -160,10 +160,6 @@ function addLaserMenu(laser, title) {
   }
 }
 
-class Particles {
-  constructor() {}
-  show(pos, size) {}
-}
 
 class Houses {
   constructor(num, minH, maxH, minW, maxW) {
@@ -326,6 +322,8 @@ class Missiles {
     this.missiles = []
     this.interval = interval
     this.speed = speed
+    this.explodeTime = 1000
+    this.blinkColor = "#F00"
 
     let timeout
     const missileInterval = () => {
@@ -368,8 +366,6 @@ class Missiles {
     const hFZ = pos.y - size.z / 2
     const hBZ = pos.y + size.z / 2
 
-
-
     const closestX = constrain(mX, hLX, hRX)
     // !important the axis is upsetdown
     const closestY = -constrain(-mY, -hBY, -hTY)
@@ -394,7 +390,8 @@ class Missiles {
       position,
       target: null,
       startFrame: 0,
-      active: true
+      active: true,
+      hit: false
     }
   }
   setTarget(missile, vec) {
@@ -405,6 +402,12 @@ class Missiles {
   }
   destroy(missile) {
     missile.active = false
+  }
+  hit(missile) {
+    missile.hit = true
+    setTimeout(() => {
+      this.destroy(missile)
+    }, this.explodeTime)
   }
 }
 function addMissileMenu(missiles) {
@@ -417,6 +420,8 @@ function addMissileMenu(missiles) {
   menu.add(ms, "height", -300, -800).name("height")
   menu.add(ms, "interval", 500, 5000).name("interval")
   menu.add(ms, "speed", 0.0001, 0.01).name("speed")
+  menu.add(ms, "explodeTime", 100, 5000)
+  menu.addColor(ms, "blinkColor")
 }
 
 const IDs = {
@@ -676,14 +681,22 @@ class System {
         const position = createVector(x, y, z).add(m.position)
         if(mComponent.isHitingBuilding({ position }, house, gPos.y)) {
           hComponent.hit(house)
+          mComponent.hit(m)
         }
       })
 
       push()
-      fill(m.color)
       translate(m.position.x, m.position.y, m.position.z)
       translate(x, y, z)
-      sphere(mComponent.size)
+
+      if(m.hit) {
+        fill(frameCount%10 > 5 ? mComponent.blinkColor: m.color)
+        sphere(mComponent.size * 2)
+      } else {
+        fill(m.color) 
+        sphere(mComponent.size)
+      }
+
       pop()
 
       if (t === 1) {
