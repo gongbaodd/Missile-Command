@@ -169,13 +169,21 @@ class Houses {
   constructor(num, minH, maxH, minW, maxW) {
     this.radius = 330
     this.num = num
+    this.strokeColor = "#000"
+    this.hitColor = "#F00"
     const createHouse = () => {
       const width = random(minW, maxW)
       const height = random(minH, maxH)
       const size = createVector(width, height, width)
       const color = random(COLORS)
 
-      return { size, pos: null, color}
+      return { 
+        size, 
+        pos: null, 
+        color, 
+        hit: false,
+        destroy: false,
+      }
     }
 
     const houses = Array.from(new Array(num))
@@ -267,6 +275,13 @@ class Houses {
     }
 
     return null // Failed to place the house after many attempts
+  }
+
+  hit(house) {
+    house.hit = true
+    setTimeout(() => {
+      house.destroy = true
+    }, 1000)
   }
 }
 
@@ -604,15 +619,26 @@ class System {
     const delta = hComponent.radius / groundRadius
 
     hComponent.houses.forEach(house => {
-      const { size, pos, color } = house
+      const { size, pos, color, hit } = house
       push()
-      stroke(0, 0, 0)
+      
+      if (hit) {
+        stroke(
+          frameCount%10 > 5 ? 
+          hComponent.hitColor: 
+          hComponent.strokeColor
+        )
+      } else {
+        stroke(hComponent.strokeColor)
+      }
       strokeWeight(2)
       fill(color)
       translate(pos.x * delta, groundPos.y - size.y/2, pos.y * delta)
       box(size.x, size.y, size.z)
       pop()
     })
+
+    hComponent.houses = hComponent.houses.filter(h => !h.destroy)
   }
   updateMissiles(entity) {
     if (!entity.hasComponent(Missiles)) return
@@ -644,15 +670,7 @@ class System {
       hComponent.houses.forEach(house => {
         const position = createVector(x, y, z).add(m.position)
         if(mComponent.isHitingBuilding({ position }, house, gPos.y)) {
-          push()
-          translate(position.x, position.y, position.z)
-          axisHelper()
-          pop()
-
-          push()
-          translate(house.pos.x, gPos.y, house.pos.y)
-          axisHelper(100)
-          pop()
+          hComponent.hit(house)
         }
       })
 
