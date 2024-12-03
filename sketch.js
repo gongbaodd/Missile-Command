@@ -18,6 +18,7 @@ const COLORS = [
 const settings = {
   orbitControl: false,
   fontRegular: null,
+  laserSound: null,
 }
 const gui = new dat.GUI();
 let system
@@ -126,6 +127,43 @@ class Laser {
   constructor(size, speed) {
     this.size = size
     this.speed = speed
+
+    this.shooting = false
+  }
+  shoot() {    
+    if (!this.shooting) {
+      this.shooting = true
+      const osc = new p5.Oscillator('sine');
+
+      const env = new p5.Envelope()
+      const attackLevel = 1
+      const releaseLevel = 0
+      env.setRange(attackLevel, releaseLevel)
+      
+      const attackTime = 0.1
+      const decayTime = 0.2
+      const sustainRatio = 0.8
+      const releaseTime = 0.3
+      
+      env.setADSR(attackTime, decayTime, sustainRatio, releaseTime);
+      // settings.laserSound.amp(env)
+      osc.amp(env)
+      osc.freq(1200)
+      
+      const reverb = new p5.Reverb()
+      reverb.process(env)
+      
+      const delay = new p5.Delay()
+      delay.setType('pingPong')
+      delay.process(env, 0.3, 0.2, 2300)
+
+      // settings.laserSound.play()
+      osc.start()
+      env.play()
+    }
+  }
+  shootEnd() {
+    this.shooting = false
   }
 }
 function addLaserMenu(laser, title) {
@@ -505,6 +543,7 @@ class System {
         } else {
           this.isGunBusy[entity.id] = true
           marker.gun = gun
+          laser.shoot()
         }
       }
 
@@ -531,6 +570,7 @@ class System {
       if (t === 1) {
         marker.done = true
         this.isGunBusy[entity.id] = false
+        laser.shootEnd()
       }
 
       return marker
@@ -782,6 +822,7 @@ function draw() {
 
 function preload() {
   settings.fontRegular = loadFont("./Regular.otf")
+  settings.laserSound = loadSound("./laser.wav")
 }
 
 function windowResized() {
