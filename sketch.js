@@ -160,6 +160,11 @@ function addLaserMenu(laser, title) {
   }
 }
 
+class Particles {
+  constructor() {}
+  show(pos, size) {}
+}
+
 class Houses {
   constructor(num, minH, maxH, minW, maxW) {
     this.radius = 330
@@ -175,11 +180,11 @@ class Houses {
 
     const houses = Array.from(new Array(num))
       .map(createHouse)
-      .concat({ // test building
-        size: createVector(100, 200, 100),
-        pos: createVector(0, 0),
-        color: COLORS[0]
-      })
+      // .concat({ // test building
+      //   size: createVector(100, 200, 100),
+      //   pos: createVector(0, 0),
+      //   color: COLORS[0]
+      // })
 
     this.houses = houses.map(h => {
       if (h.pos) return h
@@ -572,7 +577,7 @@ class System {
         push()
         translate(pos.x, pos.y, pos.z)
         fill(hoverColor.r, hoverColor.g, hoverColor.b)
-        sphere(cursor.radius)
+        torus(cursor.radius, cursor.radius/4)
         pop()
       })
     }
