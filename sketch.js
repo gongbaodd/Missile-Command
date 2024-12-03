@@ -304,22 +304,22 @@ class Missiles {
 
     let timeout
     const missileInterval = () => {
-      const { testMissile } = {
-        get testMissile() {
-          if (!DEV) return null
-          return {
-            color: COLORS[1],
-            position: createVector(0, height, 0),
-            target: createVector(0, 230, 0),
-            startFrame: frameCount,
-            active: true
-          }
-        }
-      }
+      // const { testMissile } = {
+      //   get testMissile() {
+      //     if (!DEV) return null
+      //     return {
+      //       color: COLORS[1],
+      //       position: createVector(0, height, 0),
+      //       target: createVector(0, 230, 0),
+      //       startFrame: frameCount,
+      //       active: true
+      //     }
+      //   }
+      // }
 
 
-      // this.missiles.push(this.createMissile())
-      testMissile && this.missiles.push(testMissile)
+      this.missiles.push(this.createMissile())
+      // testMissile && this.missiles.push(testMissile)
 
       timeout && clearTimeout(timeout)
       timeout = setTimeout(missileInterval, interval)
@@ -346,37 +346,14 @@ class Missiles {
 
 
     const closestX = constrain(mX, hLX, hRX)
-    const closestY = constrain(mY, hTY, hBY)
+    // !important the axis is upsetdown
+    const closestY = -constrain(-mY, -hBY, -hTY)
     const closestZ = constrain(mZ, hFZ, hBZ)
     const distX = position.x - closestX
     const distY = position.y - closestY
     const distZ = position.z - closestZ
 
     const isHiting = distX * distX + distY * distY + distZ * distZ <= r * r
-
-    if (isHiting) {
-      console.table({
-        mX, mY, mZ, hLX, hRX, hBY, hTY, hFZ, hBZ
-      })
-      /**
-       * TODO
-       * 
-       * 
-{
-    "mX": 0,
-    "mY": 20.49000000000001,
-    "mZ": 0,
-    "hLX": -50,
-    "hRX": 50,
-    "hBY": 230,
-    "hTY": 30,
-    "hFZ": -50,
-    "hBZ": 50
-}
-       */
-
-      throw "hit"
-    }
 
     return isHiting
   }
