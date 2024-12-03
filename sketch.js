@@ -171,6 +171,7 @@ class Houses {
     this.num = num
     this.strokeColor = "#000"
     this.hitColor = "#F00"
+    this.destroyTime = 1000
     const createHouse = () => {
       const width = random(minW, maxW)
       const height = random(minH, maxH)
@@ -281,7 +282,7 @@ class Houses {
     house.hit = true
     setTimeout(() => {
       house.destroy = true
-    }, 1000)
+    }, this.destroyTime)
   }
 }
 
@@ -289,6 +290,10 @@ function addHousesMenu(houses) {
   if (DEV) {
     const housesMenu = gui.addFolder("houses")
     const hComponent = houses.getComponent(Houses)
+
+    housesMenu.addColor(hComponent, "strokeColor")
+    housesMenu.addColor(hComponent, "hitColor")
+    housesMenu.add(hComponent, "destroyTime", 100, 5000)
 
     let i = 1
     for (const hs of hComponent.houses) {
