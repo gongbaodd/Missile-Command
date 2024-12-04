@@ -127,39 +127,45 @@ class Laser {
   constructor(size, speed) {
     this.size = size
     this.speed = speed
+    
+    const osc = new p5.Oscillator('triangle')
+    osc.start()
+    osc.amp(0)
+    this.osc = osc
+
+    const env = new p5.Envelope()
+    env.setRange(1, 0)
+    this.env = env
 
     this.shooting = false
+    
+    this.attackTime = 0.01
+    this.decayTime = 0.2
+    this.sustainRatio = 0.8
+    this.releaseTime = 0.2
+    this.frequency = 1200
   }
   shoot() {    
     if (!this.shooting) {
       this.shooting = true
-      const osc = new p5.Oscillator('sine');
 
-      const env = new p5.Envelope()
-      const attackLevel = 1
-      const releaseLevel = 0
-      env.setRange(attackLevel, releaseLevel)
-      
-      const attackTime = 0.1
-      const decayTime = 0.2
-      const sustainRatio = 0.8
-      const releaseTime = 0.3
-      
-      env.setADSR(attackTime, decayTime, sustainRatio, releaseTime);
-      // settings.laserSound.amp(env)
-      osc.amp(env)
-      osc.freq(1200)
+      this.osc.freq(this.frequency)
+
+      this.env.setADSR(
+        this.attackTime, 
+        this.decayTime, 
+        this.sustainRatio, 
+        this.releaseTime
+      )
       
       const reverb = new p5.Reverb()
-      reverb.process(env)
+      reverb.process(this.env)
       
       const delay = new p5.Delay()
-      delay.setType('pingPong')
-      delay.process(env, 0.3, 0.2, 2300)
+      delay.setType('feedback')
+      delay.process(this.env, 0.3, 0.5, 2300)
 
-      // settings.laserSound.play()
-      osc.start()
-      env.play()
+      this.env.play(this.osc)
     }
   }
   shootEnd() {
@@ -195,6 +201,13 @@ function addLaserMenu(laser, title) {
     laserColorMenu.add(laser.getComponent(LaserColor), "r", 0, 255).name("R")
     laserColorMenu.add(laser.getComponent(LaserColor), "g", 0, 255).name("G")
     laserColorMenu.add(laser.getComponent(LaserColor), "b", 0, 255).name("B")
+  
+    const soundMenu = laserMenu.addFolder("sound")
+    soundMenu.add(laser.getComponent(Laser), "frequency", 0, 2000).name("Frequency")
+    soundMenu.add(laser.getComponent(Laser), "attackTime", 0, 1).name("Attack Time")
+    soundMenu.add(laser.getComponent(Laser), "decayTime", 0, 1).name("Decay Time")
+    soundMenu.add(laser.getComponent(Laser), "sustainRatio", 0, 1).name("Sustain Ratio")
+    soundMenu.add(laser.getComponent(Laser), "releaseTime", 0, 1).name("Release Time")
   }
 }
 
