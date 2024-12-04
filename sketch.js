@@ -126,6 +126,8 @@ class Laser {
   constructor(size, speed) {
     this.size = size
     this.speed = speed
+
+    this.expPos = []
     
     const osc = new p5.Oscillator('triangle')
     osc.start()
@@ -142,6 +144,11 @@ class Laser {
     this.sustainRatio = 0.8
     this.releaseTime = 0.2
     this.frequency = 1200
+
+    this.explodeTime = 1000
+    this.explodeRadius = 50
+    this.explodeColor = "#FFFF00"
+    this.explodeHighlight = "#FFFFFF"
   }
   shoot(pos, zMax, zMin, xMax, xMin) {    
     if (!this.shooting) {
@@ -171,11 +178,14 @@ class Laser {
     }
   }
   shootEnd(pos) {
-    console.log(pos)
     this.shooting = false
-  }
-  explode() {
+    this.expPos.push(pos)
 
+    setTimeout(() => {
+      this.expPos = this.expPos.filter(p => {
+        return p !== pos
+      })
+    }, this.explodeTime)
   }
 }
 function addLaserMenu(laser, title) {
@@ -545,6 +555,19 @@ class System {
     const color = entity.getComponent(LaserColor)
 
     const emitterPosition = createVector(position.x, groundPos.y - laser.size, position.z)
+
+    laser.expPos.forEach((exp) => {
+      push()
+      translate(exp.x, exp.y, exp.z)
+      fill(
+        frameCount % 10 > 5 ?
+        laser.explodeColor + "7F":
+        laser.explodeHighlight + "7F"
+      )
+      sphere(laser.explodeRadius)
+      pop()
+    })
+
 
     push()
     push() // <!--Cone Header
