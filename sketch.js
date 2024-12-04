@@ -18,7 +18,6 @@ const COLORS = [
 const settings = {
   orbitControl: false,
   fontRegular: null,
-  laserSound: null,
 }
 const gui = new dat.GUI();
 let system
@@ -134,7 +133,6 @@ class Laser {
     this.osc = osc
 
     const env = new p5.Envelope()
-    env.setRange(1, 0)
     this.env = env
 
     this.shooting = false
@@ -145,25 +143,29 @@ class Laser {
     this.releaseTime = 0.2
     this.frequency = 1200
   }
-  shoot() {    
+  shoot(pos, zMax, zMin, xMax, xMin) {    
     if (!this.shooting) {
       this.shooting = true
 
-      this.osc.freq(this.frequency)
-
+      const maxV = map(pos.z, zMin, zMax, 0, 1)
+      this.env.setRange(maxV, 0)
       this.env.setADSR(
         this.attackTime, 
         this.decayTime, 
         this.sustainRatio, 
         this.releaseTime
       )
-      
       const reverb = new p5.Reverb()
       reverb.process(this.env)
       
       const delay = new p5.Delay()
       delay.setType('feedback')
       delay.process(this.env, 0.3, 0.5, 2300)
+
+      this.osc.freq(this.frequency)
+
+      const panV = map(pos.x, xMin, xMax, -1, 1)
+      this.osc.pan(panV)
 
       this.env.play(this.osc)
     }
@@ -529,6 +531,7 @@ class System {
   updateLaser(entity) {
     if (!entity.hasComponent(Laser)) return
     const ground = this.entities.find(entity => entity.id === IDs.ground)
+    const gCom = ground.getComponent(Ground)
     const groundPos = ground.getComponent(Position)
     const position = entity.getComponent(Position)
     const laser = entity.getComponent(Laser)
@@ -556,7 +559,14 @@ class System {
         } else {
           this.isGunBusy[entity.id] = true
           marker.gun = gun
-          laser.shoot()
+
+          laser.shoot(
+            position,
+            groundPos.z + gCom.radius + 200,
+            groundPos.z - gCom.radius - 200,
+            groundPos.x + gCom.radius + 200,
+            groundPos.x - gCom.radius + 200,
+          )
         }
       }
 
@@ -835,7 +845,6 @@ function draw() {
 
 function preload() {
   settings.fontRegular = loadFont("./Regular.otf")
-  settings.laserSound = loadSound("./laser.wav")
 }
 
 function windowResized() {
