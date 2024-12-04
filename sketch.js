@@ -170,8 +170,12 @@ class Laser {
       this.env.play(this.osc)
     }
   }
-  shootEnd() {
+  shootEnd(pos) {
+    console.log(pos)
     this.shooting = false
+  }
+  explode() {
+
   }
 }
 function addLaserMenu(laser, title) {
@@ -490,7 +494,7 @@ const IDs = {
 class System {
   constructor(entities) {
     this.entities = entities
-    this.markers = [] // {pos, time, done, gun: {id}}
+    this.markers = [] // {pos, time, done, exploading, gun: {id}}
     this.tempMarker = null
     this.mousePos = null
     this.pressed = false
@@ -569,7 +573,6 @@ class System {
           )
         }
       }
-
       if (marker.gun.id !== entity.id) return m
 
       const relativeMarker = p5.Vector.sub(pos, emitterPosition)
@@ -591,9 +594,9 @@ class System {
       marker.time = time + 1
 
       if (t === 1) {
-        marker.done = true
         this.isGunBusy[entity.id] = false
-        laser.shootEnd()
+        laser.shootEnd(pos)
+        marker.done = true
       }
 
       return marker
