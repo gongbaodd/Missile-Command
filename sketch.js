@@ -748,6 +748,9 @@ class System {
     const hComponent = hEntity.getComponent(Houses)
     const gPos = gEntity.getComponent(Position)
     const ground = gEntity.getComponent(Ground)
+    const laserEntities = this.entities.filter(e => {
+      return Object.keys(this.isGunBusy).includes(`${e.id}`)
+    })
 
     mComponent.missiles.forEach(m => {
       if (!m.target) {
@@ -772,6 +775,20 @@ class System {
           hComponent.hit(house)
           mComponent.hit(m)
         }
+      })
+
+      laserEntities.forEach(e => {
+        const laser = e.getComponent(Laser)
+        const { explodeRadius } = laser
+        laser.expPos.forEach(pos => {
+          const position = createVector(x, y, z).add(m.position)
+          const dist = p5.Vector.dist(pos, position)
+          
+          if (dist < (explodeRadius + mComponent.radius)) {
+            // TODO: bug
+            mComponent.hit(m)
+          }
+        })
       })
 
       push()
