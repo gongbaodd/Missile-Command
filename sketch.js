@@ -937,7 +937,7 @@ function windowResized() {
 }
 
 function drawScene() {
-  background(255)
+  background("#1a0d56")
   system.update()
 }
 
