@@ -782,10 +782,9 @@ class System {
         const { explodeRadius } = laser
         laser.expPos.forEach(pos => {
           const position = createVector(x, y, z).add(m.position)
-          const dist = p5.Vector.dist(pos, position)
+          const distance = p5.Vector.dist(pos, position)
           
-          if (dist < (explodeRadius + mComponent.radius)) {
-            // TODO: bug
+          if (distance < (explodeRadius + mComponent.size)) {
             mComponent.hit(m)
           }
         })
