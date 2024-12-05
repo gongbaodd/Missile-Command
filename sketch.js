@@ -155,7 +155,7 @@ class Laser {
 
     this.explodeTime = 1000
     this.explodeRadius = 50
-    this.explodeColor = "#FFFF00"
+    this.explodeColor = "#ff00ff"
     this.explodeHighlight = "#FFFFFF"
 
     this.destroyColor = "#FF0000"
@@ -231,6 +231,9 @@ function addLaserMenu(laser, title) {
   
     const collider = laserMenu.addFolder("Collider")
     collider.add(laser.getComponent(SphereCollider), "radius", 10, 100)
+  
+    laserMenu.addColor(laser.getComponent(Laser), "explodeColor")
+    laserMenu.addColor(laser.getComponent(Laser), "explodeHighlight")
   }
 }
 
@@ -585,7 +588,7 @@ class System {
       translate(exp.x, exp.y, exp.z)
       fill(
         frameCount % 10 > 5 ?
-        laser.explodeColor + "7F":
+        laser.explodeColor :
         laser.explodeHighlight + "7F"
       )
       sphere(laser.explodeRadius)
@@ -864,23 +867,23 @@ function setup() {
   const ground = new Entity(IDs.ground)
   ground.addComponent(new Ground(330))
   ground.addComponent(new Position(0, 230, 0))
-  ground.addComponent(new Color(150, 200, 250))
+  ground.addComponent(new Color(218, 200, 250))
   entities.push(ground)
   addGroundMenu(ground)
 
   const cursor = new Entity(IDs.cursor)
   cursor.addComponent(new Cursor(6, 60, 10))
   cursor.addComponent(new Position(0, 300, 0))
-  cursor.addComponent(new Color(0, 0, 255))
-  cursor.addComponent(new HoverColor(255, 0, 0))
+  cursor.addComponent(new Color(177, 152, 252))
+  cursor.addComponent(new HoverColor(217, 94, 160))
   entities.push(cursor)
   addCursorMenu(cursor)
 
   const laser = new Entity(IDs.laser)
   laser.addComponent(new Laser(60, 6))
   laser.addComponent(new Position(300, 300, 20))
-  laser.addComponent(new LaserHeadColor(150, 250, 150))
-  laser.addComponent(new LaserBodyColor(0, 250, 150))
+  laser.addComponent(new LaserHeadColor(77, 129, 86))
+  laser.addComponent(new LaserBodyColor(0, 166, 150))
   laser.addComponent(new LaserEmitterColor(250, 150, 150))
   laser.addComponent(new LaserColor(0, 255, 0))
   laser.addComponent(new SphereCollider())
