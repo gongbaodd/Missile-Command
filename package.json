@@ -6,11 +6,16 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "vite",
-    "build": "vite build"
+    "build": "vite build && npm run cpx",
+    "cpx": "cpx ./sketch.js ./dist"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "vite": "^5.4.11"
+  },
+  "dependencies": {
+    "cpx": "^1.5.0",
+    "npx": "^10.2.2"
   }
 }
