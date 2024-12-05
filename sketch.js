@@ -1,5 +1,4 @@
 const DEV = true
-const LASER_HEAD_DEV = true
 
 const COLORS = [
   '#FF57337F', // Bright Red-Orange
@@ -14,12 +13,11 @@ const COLORS = [
   '#FF45007F'  // Orange Red
 ]
 
-
 const settings = {
   orbitControl: false,
   fontRegular: null,
 }
-const gui = new dat.GUI();
+const gui =  DEV ? new dat.GUI(): null
 let system
 
 class Entity {
@@ -128,30 +126,6 @@ class Laser {
     this.speed = speed
 
     this.expPos = []
-    
-    const osc = new p5.Oscillator('triangle')
-    osc.start()
-    osc.amp(0)
-    this.osc = osc
-
-    const env = new p5.Envelope()
-    this.env = env
-
-    const reverb = new p5.Reverb()
-    reverb.process(this.env)
-    this.reverb = reverb
-
-    const delay = new p5.Delay()
-    delay.setType('feedback')
-    this.delay = delay
-
-    this.shooting = false
-    
-    this.attackTime = 0.01
-    this.decayTime = 0.2
-    this.sustainRatio = 0.8
-    this.releaseTime = 0.2
-    this.frequency = 1200
 
     this.explodeTime = 1000
     this.explodeRadius = 50
@@ -160,29 +134,10 @@ class Laser {
 
     this.destroyColor = "#FF0000"
   }
-  shoot(pos, zMax, zMin, xMax, xMin) {
+  shoot(sound, pos, zMax, zMin, xMax, xMin) {
     if (!this.shooting) {
       this.shooting = true
-
-      const maxV = map(pos.z, zMin, zMax, 0, 1)
-      this.env.setRange(maxV, 0)
-      this.env.setADSR(
-        this.attackTime,
-        this.decayTime,
-        this.sustainRatio,
-        this.releaseTime
-      )
-
-      this.delay.process(this.env, 0.3, 0.5, 2300)
-
-      this.reverb.set(1)
-
-      this.osc.freq(this.frequency)
-
-      const panV = map(pos.x, xMin, xMax, -1, 1)
-      this.osc.pan(panV)
-
-      this.env.play(this.osc)
+      sound.play(pos, zMax, zMin, xMax, xMin)
     }
   }
   shootEnd(pos) {
@@ -227,17 +182,87 @@ function addLaserMenu(laser, title) {
     laserColorMenu.add(laser.getComponent(LaserColor), "b", 0, 255).name("B")
   
     const soundMenu = laserMenu.addFolder("sound")
-    soundMenu.add(laser.getComponent(Laser), "frequency", 0, 2000).name("Frequency")
-    soundMenu.add(laser.getComponent(Laser), "attackTime", 0, 1).name("Attack Time")
-    soundMenu.add(laser.getComponent(Laser), "decayTime", 0, 1).name("Decay Time")
-    soundMenu.add(laser.getComponent(Laser), "sustainRatio", 0, 1).name("Sustain Ratio")
-    soundMenu.add(laser.getComponent(Laser), "releaseTime", 0, 1).name("Release Time")
-  
+    soundMenu.add(laser.getComponent(Sound), "frequency", 0, 2000).name("Frequency")
+    soundMenu.add(laser.getComponent(Sound), "attackTime", 0, 1).name("Attack Time")
+    soundMenu.add(laser.getComponent(Sound), "decayTime", 0, 1).name("Decay Time")
+    soundMenu.add(laser.getComponent(Sound), "sustainRatio", 0, 1).name("Sustain Ratio")
+    soundMenu.add(laser.getComponent(Sound), "releaseTime", 0, 1).name("Release Time")
+    soundMenu.add(laser.getComponent(Sound), "reverbTime", 0, 10)
+
     const collider = laserMenu.addFolder("Collider")
     collider.add(laser.getComponent(SphereCollider), "radius", 10, 100)
   
     laserMenu.addColor(laser.getComponent(Laser), "explodeColor")
     laserMenu.addColor(laser.getComponent(Laser), "explodeHighlight")
+  }
+}
+
+class Sound {
+  constructor(
+    sound,
+    attackTime,
+    decayTime,
+    sustainRatio,
+    releaseTime,
+    frequency,
+    reverbTime,
+    delayTime,
+    delayfeedback
+  ) {
+    if (sound instanceof p5.Oscillator) {
+      sound.start()
+      sound.amp(0)
+    }
+    this.sound = sound
+
+    const env = new p5.Envelope()
+    this.env = env
+
+    const reverb = new p5.Reverb()
+    reverb.process(this.env)
+    this.reverb = reverb
+
+    const delay = new p5.Delay()
+    delay.setType('feedback')
+    this.delay = delay
+    
+    this.attackTime = attackTime
+    this.decayTime = decayTime
+    this.sustainRatio = sustainRatio
+    this.releaseTime = releaseTime
+    this.frequency = frequency
+    this.reverbTime = reverbTime
+    this.delayTime = delayTime
+    this.delayfeedback = delayfeedback
+  }
+  play(pos, zMax, zMin, xMax, xMin) {
+    const maxV = map(pos.z, zMin, zMax, 0, 1)
+    this.env.setRange(maxV, 0)
+    this.env.setADSR(
+      this.attackTime,
+      this.decayTime,
+      this.sustainRatio,
+      this.releaseTime
+    )
+
+    this.delay.process(
+      this.env, this.delayTime, this.delayfeedback
+    )
+
+    this.reverb.set(this.reverbTime)
+
+    if (!this.sound instanceof p5.Noise) {
+      // it will throw Undefined error in p5.js to set frequency on Noise
+      this.sound.freq(this.frequency)
+    }
+
+    const panV = constrain(
+      map(pos.x, xMin, xMax, -1, 1),
+      -1, 1,
+    )
+    this.sound.pan(panV)
+
+    this.env.play(this.sound)
   }
 }
 
@@ -423,6 +448,12 @@ class Missiles {
     this.explodeTime = 1000
     this.blinkColor = "#F00"
 
+    this.sound = null
+    this.zMax = null 
+    this.zMin = null 
+    this.xMax = null 
+    this.xMin = null
+
     let timeout
     const missileInterval = () => {
       this.missiles.push(this.createMissile())
@@ -486,11 +517,25 @@ class Missiles {
   destroy(missile) {
     missile.active = false
   }
-  hit(missile) {
+  hit(missile, pos) {
     missile.hit = true
+
+    this.sound?.play(
+      pos, 
+      this.zMax, this.zMin, 
+      this.xMax, this.xMin,
+    )
+
     setTimeout(() => {
       this.destroy(missile)
     }, this.explodeTime)
+  }
+  setSound(sound, zMax, zMin, xMax, xMin) {
+    this.sound = sound
+    this.zMax = zMax
+    this.zMin = zMin
+    this.xMax = xMax
+    this.xMin = xMin
   }
 }
 function addMissileMenu(missiles) {
@@ -505,6 +550,15 @@ function addMissileMenu(missiles) {
   menu.add(ms, "speed", 0.0001, 0.01).name("speed")
   menu.add(ms, "explodeTime", 100, 5000)
   menu.addColor(ms, "blinkColor")
+
+  const soundMenu = menu.addFolder("sound")
+  soundMenu.add(missiles.getComponent(Sound), "frequency", 0, 2000).name("Frequency")
+  soundMenu.add(missiles.getComponent(Sound), "attackTime", 0, 1).name("Attack Time")
+  soundMenu.add(missiles.getComponent(Sound), "decayTime", 0, 1).name("Decay Time")
+  soundMenu.add(missiles.getComponent(Sound), "sustainRatio", 0, 1).name("Sustain Ratio")
+  soundMenu.add(missiles.getComponent(Sound), "releaseTime", 0, 1).name("Release Time")
+  soundMenu.add(missiles.getComponent(Sound), "reverbTime", 0, 10)
+
 }
 
 const IDs = {
@@ -573,6 +627,7 @@ class System {
     const headColor = entity.getComponent(LaserHeadColor)
     const color = entity.getComponent(LaserColor)
     const collider = entity.getComponent(SphereCollider)
+    const sound = entity.getComponent(Sound)
 
     const emitterPosition = createVector(position.x, groundPos.y - laser.size, position.z)
 
@@ -619,6 +674,7 @@ class System {
           marker.gun = gun
 
           laser.shoot(
+            sound,
             position,
             groundPos.z + gCom.radius + 200,
             groundPos.z - gCom.radius - 200,
@@ -788,9 +844,20 @@ class System {
     const hComponent = hEntity.getComponent(Houses)
     const gPos = gEntity.getComponent(Position)
     const ground = gEntity.getComponent(Ground)
+    const sound = entity.getComponent(Sound)
     const laserEntities = this.entities.filter(e => {
       return Object.keys(this.isGunBusy).includes(`${e.id}`)
     })
+
+    if(!mComponent.sound) {
+      mComponent.setSound(
+        sound,
+        gPos.z + ground.radius + 200,
+        gPos.z - ground.radius - 200,
+        gPos.x + ground.radius + 200,
+        gPos.x - ground.radius + 200,
+      )
+    }
 
     mComponent.missiles.forEach(m => {
       if (!m.target) {
@@ -813,7 +880,7 @@ class System {
       hComponent.houses.forEach(house => {
         if(mComponent.isHitingBuilding({ position }, house, gPos.y)) {
           hComponent.hit(house)
-          mComponent.hit(m)
+          mComponent.hit(m, position)
         }
       })
       
@@ -825,14 +892,14 @@ class System {
           const distance = p5.Vector.dist(pos, position)
           
           if (distance < (explodeRadius + mComponent.size)) {
-            mComponent.hit(m)
+            mComponent.hit(m, position)
           }
         })
 
         const collider = e.getComponent(SphereCollider)
         const distance = p5.Vector.dist(collider.pos, position)
         if (distance < (collider.radius + mComponent.size)) {
-          mComponent.hit(m)
+          mComponent.hit(m, position)
           collider.hit()
         }
       })
@@ -891,6 +958,10 @@ function setup() {
   laser.addComponent(new LaserEmitterColor(250, 150, 150))
   laser.addComponent(new LaserColor(0, 255, 0))
   laser.addComponent(new SphereCollider())
+  laser.addComponent(new Sound(
+    new p5.Oscillator('triangle'),
+    0.01, 0.2, 0.8, 0.2, 1200, 1, 0.2, 0.5
+  ))
   entities.push(laser)
   addLaserMenu(laser)
 
@@ -902,6 +973,10 @@ function setup() {
   shooter.addComponent(new LaserEmitterColor(250, 150, 150))
   shooter.addComponent(new LaserColor(0, 55, 255))
   shooter.addComponent(new SphereCollider())
+  shooter.addComponent(new Sound(
+    new p5.Oscillator('triangle'),
+    0.01, 0.2, 0.8, 0.2, 1200, 1, 0.2, 0.5
+  ))
   entities.push(shooter)
   addLaserMenu(shooter, "shooter")
 
@@ -913,6 +988,10 @@ function setup() {
   cannon.addComponent(new LaserEmitterColor(250, 150, 150))
   cannon.addComponent(new LaserColor(255, 100, 100))
   cannon.addComponent(new SphereCollider())
+  cannon.addComponent(new Sound(
+    new p5.Oscillator('triangle'),
+    0.01, 0.2, 0.8, 0.2, 1200, 1, 0.2, 0.5
+  ))
   entities.push(cannon)
   addLaserMenu(cannon, "cannon")
 
@@ -923,6 +1002,10 @@ function setup() {
 
   const missiles = new Entity(IDs)
   missiles.addComponent(new Missiles(10, 500, -500, 1000))
+  missiles.addComponent(new Sound(
+    new p5.Noise("white"),
+    0.01, 0.1, 0.1, 0.02, 200, 0, 0, 0
+  ))
   entities.push(missiles)
   addMissileMenu(missiles)
 
@@ -932,6 +1015,7 @@ function setup() {
 
 function draw() {
   if (settings.orbitControl) orbitControl()
+
   drawScene()
 }
 
