@@ -138,12 +138,12 @@ class Laser {
     this.env = env
 
     const reverb = new p5.Reverb()
-    reverb.set(1)
     reverb.process(this.env)
+    this.reverb = reverb
 
     const delay = new p5.Delay()
     delay.setType('feedback')
-    delay.process(this.env, 0.3, 0.5, 2300)
+    this.delay = delay
 
     this.shooting = false
     
@@ -160,18 +160,22 @@ class Laser {
 
     this.destroyColor = "#FF0000"
   }
-  shoot(pos, zMax, zMin, xMax, xMin) {    
+  shoot(pos, zMax, zMin, xMax, xMin) {
     if (!this.shooting) {
       this.shooting = true
 
       const maxV = map(pos.z, zMin, zMax, 0, 1)
       this.env.setRange(maxV, 0)
       this.env.setADSR(
-        this.attackTime, 
-        this.decayTime, 
-        this.sustainRatio, 
+        this.attackTime,
+        this.decayTime,
+        this.sustainRatio,
         this.releaseTime
       )
+
+      this.delay.process(this.env, 0.3, 0.5, 2300)
+
+      this.reverb.set(1)
 
       this.osc.freq(this.frequency)
 
