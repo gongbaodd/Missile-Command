@@ -137,6 +137,14 @@ class Laser {
     const env = new p5.Envelope()
     this.env = env
 
+    const reverb = new p5.Reverb()
+    reverb.set(1)
+    reverb.process(this.env)
+
+    const delay = new p5.Delay()
+    delay.setType('feedback')
+    delay.process(this.env, 0.3, 0.5, 2300)
+
     this.shooting = false
     
     this.attackTime = 0.01
@@ -164,13 +172,6 @@ class Laser {
         this.sustainRatio, 
         this.releaseTime
       )
-      const reverb = new p5.Reverb()
-      reverb.set(1)
-      reverb.process(this.env)
-      
-      const delay = new p5.Delay()
-      delay.setType('feedback')
-      delay.process(this.env, 0.3, 0.5, 2300)
 
       this.osc.freq(this.frequency)
 
