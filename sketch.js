@@ -165,6 +165,7 @@ class Laser {
         this.releaseTime
       )
       const reverb = new p5.Reverb()
+      reverb.set(1)
       reverb.process(this.env)
       
       const delay = new p5.Delay()
