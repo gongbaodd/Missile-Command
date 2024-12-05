@@ -149,6 +149,8 @@ class Laser {
     this.explodeRadius = 50
     this.explodeColor = "#FFFF00"
     this.explodeHighlight = "#FFFFFF"
+
+    this.destroyColor = "#FF0000"
   }
   shoot(pos, zMax, zMin, xMax, xMin) {    
     if (!this.shooting) {
@@ -224,6 +226,31 @@ function addLaserMenu(laser, title) {
     soundMenu.add(laser.getComponent(Laser), "decayTime", 0, 1).name("Decay Time")
     soundMenu.add(laser.getComponent(Laser), "sustainRatio", 0, 1).name("Sustain Ratio")
     soundMenu.add(laser.getComponent(Laser), "releaseTime", 0, 1).name("Release Time")
+  
+    const collider = laserMenu.addFolder("Collider")
+    collider.add(laser.getComponent(SphereCollider), "radius", 10, 100)
+  }
+}
+
+class SphereCollider {
+  constructor() {
+    this.radius = 40
+    this.destroyTime = 1000
+
+    this.isHit = false
+    this.isDestroyed = false
+    this.pos = null
+  }
+  setPos(pos) {
+    this.pos = pos
+  }
+  hit() {
+    if (!this.isHit) {
+      this.isHit = true
+      setTimeout(() => {
+        this.isDestroyed = true
+      }, 1000)
+    }
   }
 }
 
@@ -252,11 +279,6 @@ class Houses {
 
     const houses = Array.from(new Array(num))
       .map(createHouse)
-      // .concat({ // test building
-      //   size: createVector(100, 200, 100),
-      //   pos: createVector(0, 0),
-      //   color: COLORS[0]
-      // })
 
     this.houses = houses.map(h => {
       if (h.pos) return h
@@ -394,22 +416,7 @@ class Missiles {
 
     let timeout
     const missileInterval = () => {
-      // const { testMissile } = {
-      //   get testMissile() {
-      //     if (!DEV) return null
-      //     return {
-      //       color: COLORS[1],
-      //       position: createVector(0, height, 0),
-      //       target: createVector(0, 230, 0),
-      //       startFrame: frameCount,
-      //       active: true
-      //     }
-      //   }
-      // }
-
-
       this.missiles.push(this.createMissile())
-      // testMissile && this.missiles.push(testMissile)
 
       timeout && clearTimeout(timeout)
       timeout = setTimeout(missileInterval, interval)
@@ -521,6 +528,9 @@ class System {
     Object.keys(this.isGunBusy).forEach(id => {
       if (this.isGunBusy[id]) return
       const gun = this.entities.find(entity => entity.id == id)
+
+      if (!gun) return;
+
       const { x, y, z } = gun.getComponent(Position)
       const gDistance = p5.Vector.dist(createVector(x, y, z), markerPos)
       distance = min(gDistance, distance)
@@ -553,8 +563,20 @@ class System {
     const bodyColor = entity.getComponent(LaserBodyColor)
     const headColor = entity.getComponent(LaserHeadColor)
     const color = entity.getComponent(LaserColor)
+    const collider = entity.getComponent(SphereCollider)
 
     const emitterPosition = createVector(position.x, groundPos.y - laser.size, position.z)
+
+    if (!collider.pos) {
+      collider.setPos(emitterPosition)
+    }
+
+    if (collider.isDestroyed) {
+      this.entities = this.entities.filter(e => {
+        return e !== entity
+      })
+      return
+    }
 
     laser.expPos.forEach((exp) => {
       push()
@@ -625,7 +647,12 @@ class System {
       return marker
     }).filter(marker => !marker.done)
 
-    fill(headColor.r, headColor.g, headColor.b)
+    if (collider.isHit && frameCount % 10 > 5) {
+      fill(laser.destroyColor)
+    } else {
+      fill(headColor.r, headColor.g, headColor.b)
+    }
+
     translate(0, laser.size / 3, 0)
     cone(laser.size / 2, laser.size / 2)
 
@@ -634,7 +661,11 @@ class System {
     const axis = createVector(1, 0, 0)
     rotate(PI, axis);
 
-    fill(bodyColor.r, bodyColor.g, bodyColor.b)
+    if (collider.isHit && frameCount % 10 > 5) {
+      fill(laser.destroyColor)
+    } else {
+      fill(bodyColor.r, bodyColor.g, bodyColor.b)
+    }
     translate(position.x, -groundPos.y + laser.size / 3.6, -position.z)
     cone(laser.size / 3, laser.size / 2)
     pop()
@@ -768,26 +799,33 @@ class System {
       const x = lerp(0, direction.x, t)
       const y = lerp(0, direction.y, t)
       const z = lerp(0, direction.z, t)
+      const position = createVector(x, y, z).add(m.position)
 
       hComponent.houses.forEach(house => {
-        const position = createVector(x, y, z).add(m.position)
         if(mComponent.isHitingBuilding({ position }, house, gPos.y)) {
           hComponent.hit(house)
           mComponent.hit(m)
         }
       })
-
+      
       laserEntities.forEach(e => {
         const laser = e.getComponent(Laser)
         const { explodeRadius } = laser
+
         laser.expPos.forEach(pos => {
-          const position = createVector(x, y, z).add(m.position)
           const distance = p5.Vector.dist(pos, position)
           
           if (distance < (explodeRadius + mComponent.size)) {
             mComponent.hit(m)
           }
         })
+
+        const collider = e.getComponent(SphereCollider)
+        const distance = p5.Vector.dist(collider.pos, position)
+        if (distance < (collider.radius + mComponent.size)) {
+          mComponent.hit(m)
+          collider.hit()
+        }
       })
 
       push()
@@ -843,6 +881,7 @@ function setup() {
   laser.addComponent(new LaserBodyColor(0, 250, 150))
   laser.addComponent(new LaserEmitterColor(250, 150, 150))
   laser.addComponent(new LaserColor(0, 255, 0))
+  laser.addComponent(new SphereCollider())
   entities.push(laser)
   addLaserMenu(laser)
 
@@ -853,6 +892,7 @@ function setup() {
   shooter.addComponent(new LaserBodyColor(60, 150, 30))
   shooter.addComponent(new LaserEmitterColor(250, 150, 150))
   shooter.addComponent(new LaserColor(0, 55, 255))
+  shooter.addComponent(new SphereCollider())
   entities.push(shooter)
   addLaserMenu(shooter, "shooter")
 
@@ -863,6 +903,7 @@ function setup() {
   cannon.addComponent(new LaserBodyColor(255, 80, 80))
   cannon.addComponent(new LaserEmitterColor(250, 150, 150))
   cannon.addComponent(new LaserColor(255, 100, 100))
+  cannon.addComponent(new SphereCollider())
   entities.push(cannon)
   addLaserMenu(cannon, "cannon")
 
