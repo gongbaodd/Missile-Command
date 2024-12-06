@@ -16,6 +16,7 @@ const COLORS = [
 const settings = {
   orbitControl: false,
   fontRegular: null,
+  bgm: null
 }
 const gui =  DEV ? new dat.GUI(): null
 let system
@@ -1011,6 +1012,8 @@ function setup() {
 
   const sys = new System(entities)
   system = sys
+
+  settings.bgm.play()
 }
 
 function draw() {
@@ -1021,6 +1024,7 @@ function draw() {
 
 function preload() {
   settings.fontRegular = loadFont("./Regular.otf")
+  settings.bgm = loadSound("./bgm.wav")
 }
 
 function windowResized() {
