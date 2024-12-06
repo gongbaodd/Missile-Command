@@ -1117,7 +1117,7 @@ function mouseMoved() {
   let mouseX3D = (mouseX - width / 2) / (width / 2)
   let mouseY3D = (mouseY - height / 2) / (height / 2)
 
-  let fov = PI / 3
+  let fov = 2 * atan(height / 2 / 800)
   let aspect = width / height
   let nearPlane = tan(fov / 2)
 
