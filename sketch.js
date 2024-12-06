@@ -20,6 +20,7 @@ const settings = {
 }
 const gui =  DEV ? new dat.GUI(): null
 let system
+let gameOverSystem
 
 class Entity {
   constructor(id) {
@@ -569,7 +570,8 @@ const IDs = {
   "shooter": 4,
   "cannon": 5,
   "houses": 6,
-  "missiles": 7
+  "missiles": 7,
+  "gameOver": 8
 }
 
 class System {
@@ -585,6 +587,20 @@ class System {
       4: false,
       5: false
     }
+  }
+  isGameOver() {
+    const housesEntity = this.entities.find(entity => entity.id == IDs.houses)
+    const laserEntities = this.entities.filter(e => {
+      return Object.keys(this.isGunBusy).includes(`${e.id}`)
+    })
+
+    const housesCom = housesEntity.getComponent(Houses)
+    const lasersColliderComs = laserEntities.map(l => l.getComponent(SphereCollider))
+    const houses = housesCom.houses
+    const haveHouses = houses.length > 0
+    const haveGuns = lasersColliderComs.filter(l => !l.isDestroyed).length > 0
+
+    return !haveGuns && !haveHouses
   }
   findNearestAvailableGun(markerPos) {
     let distance = Infinity;
@@ -928,6 +944,45 @@ class System {
   }
 }
 
+class GameOverText {
+  constructor() {
+    this.color = "#FFF"
+    this.titleSize = 100
+    this.titleX = -200
+  }
+}
+
+function gameOverMenu(entity) {
+  if (DEV) {
+    const menu = gui.addFolder("game over")
+    const txt = entity.getComponent(GameOverText)
+
+    menu.addColor(txt, "color")
+    menu.add(txt, "titleSize", 0, 200).name("titleSize")
+    menu.add(txt, "titleX", -1000, 1000).name("titleX")
+  }
+}
+
+class GameOverSystem {
+  constructor(entities) {
+    this.entities = entities
+  }
+  update() {
+    this.entities.forEach(e => {
+      if (e.hasComponent(GameOverText)) {
+        const txt = e.getComponent(GameOverText)
+
+        push()
+        textFont(settings.fontRegular)
+        fill(txt.color)
+        noStroke()
+        textSize(txt.titleSize)
+        text("Game Over", txt.titleX, 0)
+        pop()
+      }
+    })
+  }
+}
 
 function setup() {
   createCanvas(windowWidth, windowHeight, WEBGL)
@@ -1001,7 +1056,7 @@ function setup() {
   entities.push(houses)
   addHousesMenu(houses)
 
-  const missiles = new Entity(IDs)
+  const missiles = new Entity(IDs.missiles)
   missiles.addComponent(new Missiles(10, 500, -500, 1000))
   missiles.addComponent(new Sound(
     new p5.Noise("white"),
@@ -1013,12 +1068,17 @@ function setup() {
   const sys = new System(entities)
   system = sys
 
+  const goEntity = new Entity(IDs.gameOver)
+  goEntity.addComponent(new GameOverText())
+  gameOverMenu(goEntity)
+
+  gameOverSystem = new GameOverSystem([goEntity])
+
   settings.bgm.play()
 }
 
 function draw() {
   if (settings.orbitControl) orbitControl()
-
   drawScene()
 }
 
@@ -1034,7 +1094,13 @@ function windowResized() {
 
 function drawScene() {
   background("#1a0d56")
-  system.update()
+
+  if (system.isGameOver()) {
+    settings.bgm.stop()
+    gameOverSystem.update()
+  } else {
+    system.update()
+  }
 }
 
 function mouseMoved() {
