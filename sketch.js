@@ -1025,6 +1025,7 @@ function draw() {
 function preload() {
   settings.fontRegular = loadFont("./Regular.otf")
   settings.bgm = loadSound("./bgm.wav")
+  settings.bgm.loop(true)
 }
 
 function windowResized() {
