@@ -17,4 +17,5 @@ export interface CreateSceneModule {
 
 export const getSceneModule = (): CreateSceneClass => {
     return new MissileCommandScene();
+    // return new DefaultSceneWithTexture();
 }

@@ -104,6 +104,17 @@ export class MissileCommandScene implements CreateSceneClass {
         this.scene = new Scene(engine);
         this.scene.clearColor = new Color4(0.1, 0.05, 0.34, 1); // Dark purple background
 
+        void Promise.all([
+            import("@babylonjs/core/Debug/debugLayer"),
+            import("@babylonjs/inspector"),
+        ]).then((_values) => {
+            console.log(_values);
+            this.scene.debugLayer.show({
+                handleResize: true,
+                overlay: true,
+            });
+        });
+
         // Setup camera
         this.setupCamera(canvas);
         
