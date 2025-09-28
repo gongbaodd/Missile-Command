@@ -14,5 +14,11 @@
     "@biomejs/biome": "2.2.3",
     "@rsbuild/core": "^1.5.6",
     "typescript": "^5.9.2"
+  },
+  "dependencies": {
+    "@babylonjs/core": "^8.29.0",
+    "@babylonjs/loaders": "^8.29.0",
+    "@babylonjs/materials": "^8.29.0",
+    "recast-detour": "^1.6.4"
   }
 }
