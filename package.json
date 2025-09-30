@@ -13,6 +13,8 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@types/dat.gui": "^0.7.13",
+    "@types/p5": "^1.7.6",
     "daisyui": "^5.1.25",
     "vite": "^5.4.11"
   },
@@ -21,6 +23,7 @@
     "@tailwindcss/vite": "^4.1.13",
     "cpx": "^1.5.0",
     "npx": "^10.2.2",
+    "p5": "^2.0.5",
     "solid-devtools": "^0.34.3",
     "solid-js": "^1.9.9",
     "tailwindcss": "^4.1.13",

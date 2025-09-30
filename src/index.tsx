@@ -4,6 +4,9 @@ import "./global.css"
 import { render } from 'solid-js/web';
 import 'solid-devtools';
 
+import p5 from 'p5'
+import { mySketch } from './sketch.js'
+
 import App from './App';
 
 const root = document.getElementById('root');
@@ -15,3 +18,5 @@ if (import.meta.env.DEV && !(root instanceof HTMLElement)) {
 }
 
 render(() => <App />, root!);
+
+new p5(mySketch, document.getElementById('sketch'))
