@@ -23,6 +23,8 @@
     "@tailwindcss/vite": "^4.1.13",
     "cpx": "^1.5.0",
     "dat.gui": "^0.7.9",
+    "firebase": "^12.3.0",
+    "nanostores": "^1.0.1",
     "npx": "^10.2.2",
     "p5": "^2.0.5",
     "solid-devtools": "^0.34.3",
