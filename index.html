@@ -7,10 +7,22 @@
     <link rel="stylesheet" type="text/css" href="style.css">
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+      body {
+        position: relative;
+      }
+      #root {
+        position: absolute;
+        top: 0;
+        left: 0;
+      }
+    </style>
   </head>
   <body>
     <main>
+       <div id="root"></div>
     </main>
     <script src="sketch.js"></script>
+    <script src="src/index.tsx" type="module"></script>
   </body>
 </html>
