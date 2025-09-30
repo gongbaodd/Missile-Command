@@ -17,6 +17,9 @@ importers:
       cpx:
         specifier: ^1.5.0
         version: 1.5.0
+      dat.gui:
+        specifier: ^0.7.9
+        version: 0.7.9
       npx:
         specifier: ^10.2.2
         version: 10.2.2
@@ -36,6 +39,12 @@ importers:
         specifier: ^2.11.8
         version: 2.11.8(solid-js@1.9.9)(vite@5.4.20(lightningcss@1.30.1))
     devDependencies:
+      '@types/dat.gui':
+        specifier: ^0.7.13
+        version: 0.7.13
+      '@types/p5':
+        specifier: ^1.7.6
+        version: 1.7.6
       daisyui:
         specifier: ^5.1.25
         version: 5.1.25
@@ -647,8 +656,14 @@ packages:
   '@types/babel__traverse@7.28.0':
     resolution: {integrity: sha512-8PvcXf70gTDZBgt9ptxJ8elBeBjcLOAcOtoO/mPJjtji1+CdGbHgm77om1GrsPxsiE+uXIpNSK64UYaIwQXd4Q==}
 
+  '@types/dat.gui@0.7.13':
+    resolution: {integrity: sha512-LmG4Pr0mbsB/1WVttf8xaHx45BvSBDGY5D9+0/9AZCbI4vvOguwBHZdKyJMxt5Yst8+icRSHKmr7ClV2u5ZtDA==}
+
   '@types/estree@1.0.8':
     resolution: {integrity: sha512-dWHzHa2WqEXI/O1E9OjrocMTKJl2mSrEolh1Iomrv6U+JuNwaHXsXx9bLu5gG7BUWFIN0skIQJQ/L1rIex4X6w==}
+
+  '@types/p5@1.7.6':
+    resolution: {integrity: sha512-6pLTOo0V3N5jZb5nTwjiv3lPHLK3Z/TjbhQUj8CTWXocUk1Z/f6OHTp3Pcwi1BhWnf5gqKUcyEb1gP0KIJuQgw==}
 
   '@types/react-dom@19.1.9':
     resolution: {integrity: sha512-qXRuZaOsAdXKFyOhRBg6Lqqc0yay13vN7KrIg4L7N4aaHN68ma9OK3NE1BoDFgFOTfM7zg+3/8+2n8rLUH3OKQ==}
@@ -814,6 +829,9 @@ packages:
 
   daisyui@5.1.25:
     resolution: {integrity: sha512-LYOGVIzTCCucEFkKmdj0fxbHHPZ83fpkYD7jXYF3/7UwrUu68TtXkIdGtEXadzeqUT361hCe6cj5tBB/7mvszw==}
+
+  dat.gui@0.7.9:
+    resolution: {integrity: sha512-sCNc1OHobc+Erc1HqiswYgHdVNpSJUlk/Hz8vzOCsER7rl+oF/4+v8GXFUyCgtXpoCX6+bnmg07DedLvBLwYKQ==}
 
   debug@2.6.9:
     resolution: {integrity: sha512-bC7ElrdJaJnPbAP+1EotYvqZsb3ecl5wi6Bfi6BJTUcNowp6cvspg0jXznRTKDjm/E7AdgFBVeAPVMNcKGsHMA==}
@@ -2171,7 +2189,11 @@ snapshots:
     dependencies:
       '@babel/types': 7.28.4
 
+  '@types/dat.gui@0.7.13': {}
+
   '@types/estree@1.0.8': {}
+
+  '@types/p5@1.7.6': {}
 
   '@types/react-dom@19.1.9(@types/react@19.1.15)':
     dependencies:
@@ -2367,6 +2389,8 @@ snapshots:
   csstype@3.1.3: {}
 
   daisyui@5.1.25: {}
+
+  dat.gui@0.7.9: {}
 
   debug@2.6.9:
     dependencies:

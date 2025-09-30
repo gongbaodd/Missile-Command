@@ -15,6 +15,6 @@
 
     // Type Checking & Safety
     "strict": true,
-    "types": ["vite/client", "p5"]
+    "types": ["vite/client"]
   }
 }
