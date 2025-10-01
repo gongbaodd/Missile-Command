@@ -396,10 +396,10 @@ export class MissileCommandScene implements CreateSceneClass {
                     this.handleMouseMove();
                     break;
                 case PointerEventTypes.POINTERDOWN:
-                    this.handleMouseDown(pointerInfo);
+                    this.handleMouseDown();
                     break;
                 case PointerEventTypes.POINTERUP:
-                    this.handleMouseUp(pointerInfo);
+                    this.handleMouseUp();
                     break;
             }
         });
@@ -421,22 +421,17 @@ export class MissileCommandScene implements CreateSceneClass {
         }
     }
 
-    private handleMouseDown(pointerInfo: any): void {
-        const pickInfo = pointerInfo.pickInfo;
-        if (pickInfo?.hit && pickInfo.pickedMesh === this.ground) {
-            const position = pickInfo.pickedPoint!;
-            this.addMarker(position);
-        }
+    private handleMouseDown(): void {
         this.isPointerDown = true;
     }
 
-    private handleMouseUp(_pointerInfo: any): void {
+    private handleMouseUp(): void {
         this.isPointerDown = false;
+        this.addMarker(this.cursorDot.position.clone());
         this.resetCursorDot();
     }
 
     private addMarker(position: Vector3): void {
-
         // Find nearest available laser
         const availableLaser = this.findNearestAvailableLaser(position);
         if (availableLaser) {
