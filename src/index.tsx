@@ -37,8 +37,39 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const healthDB = getDatabase(app);
-const healthCheck = ref(healthDB, "health_check");
+const db = getDatabase(app);
+const healthCheck = ref(db, "health_check");
+const roomsRef = ref(db, "room")
 
-const isConnected = (await get(healthCheck)).val()
-console.log(isConnected)
+// const isConnected = (await get(healthCheck)).val()
+
+const rooms = (await get(roomsRef)).val()
+
+// Check hash in URL and create 6-digit capitalized letters hash if empty
+function generateRandomHash(): string {
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  let hash = '';
+  for (let i = 0; i < 6; i++) {
+    hash += letters.charAt(Math.floor(Math.random() * letters.length));
+  }
+  return hash;
+}
+
+// Check current hash
+const currentHash = window.location.hash.substring(1); // Remove the # symbol
+
+if (!currentHash) {
+  // Generate new hash and update URL
+  const newHash = generateRandomHash();
+  window.location.hash = newHash;
+  console.log('Generated new hash:', newHash);
+} else {
+  console.log('Current hash:', currentHash);
+  
+  // Check if the hash exists in rooms data
+  if (!rooms || !rooms[currentHash]) {
+    alert("error");
+  } else {
+    console.log('Room data for hash', currentHash, ':', rooms[currentHash]);
+  }
+}
