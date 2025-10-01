@@ -11,6 +11,7 @@ import { DirectionalLight } from "@babylonjs/core/Lights/directionalLight";
 import { ShadowGenerator } from "@babylonjs/core/Lights/Shadows/shadowGenerator";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
+import { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
 
 import "@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent";
@@ -423,13 +424,28 @@ export class MissileCommandScene implements CreateSceneClass {
     }
 
     private handleMouseDown(): void {
-        this.isPointerDown = true;
+        const pickInfo = this.scene.pick(
+            this.scene.pointerX,
+            this.scene.pointerY,
+            (mesh) => mesh === this.ground
+        );
+        if (pickInfo?.hit && pickInfo.pickedMesh === this.ground) {
+            this.isPointerDown = true;
+        }
+
     }
 
     private handleMouseUp(): void {
-        this.isPointerDown = false;
-        this.addMarker(this.cursorDot.getAbsolutePosition().clone());
-        this.resetCursorDot();
+        const pickInfo = this.scene.pick(
+            this.scene.pointerX,
+            this.scene.pointerY,
+            (mesh) => mesh === this.ground
+        );
+        if (pickInfo?.hit && pickInfo.pickedMesh === this.ground) {
+            this.isPointerDown = false;
+            this.addMarker(this.cursorDot.getAbsolutePosition().clone());
+            this.resetCursorDot();
+        }
     }
 
     private addMarker(position: Vector3): void {
@@ -677,7 +693,11 @@ export class MissileCommandScene implements CreateSceneClass {
         plusMesh.material = markerMaterial;
         plusMesh.isPickable = false;
 
+        // Always face the camera
+        plusMesh.billboardMode = AbstractMesh.BILLBOARDMODE_ALL;
+
         plusMesh.position = new Vector3(position.x, Math.max(0.5, position.y), position.z);
+        plusMesh.rotation.x = Math.PI / 2;
 
         return plusMesh;
     }
