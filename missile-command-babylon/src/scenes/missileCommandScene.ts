@@ -73,6 +73,7 @@ interface Marker {
     time: number;
     isDone: boolean;
     assignedLaser?: LaserSystem;
+    mesh: Mesh;
 }
 
 export class MissileCommandScene implements CreateSceneClass {
@@ -427,7 +428,7 @@ export class MissileCommandScene implements CreateSceneClass {
 
     private handleMouseUp(): void {
         this.isPointerDown = false;
-        this.addMarker(this.cursorDot.position.clone());
+        this.addMarker(this.cursorDot.getAbsolutePosition().clone());
         this.resetCursorDot();
     }
 
@@ -435,11 +436,13 @@ export class MissileCommandScene implements CreateSceneClass {
         // Find nearest available laser
         const availableLaser = this.findNearestAvailableLaser(position);
         if (availableLaser) {
+            const markerMesh = this.createPlusMarker(position);
             this.gameState.markers.push({
                 position,
                 time: 0,
                 isDone: false,
-                assignedLaser: availableLaser
+                assignedLaser: availableLaser,
+                mesh: markerMesh
             });
             availableLaser.isBusy = true;
         }
@@ -632,6 +635,7 @@ export class MissileCommandScene implements CreateSceneClass {
         for (let i = this.gameState.markers.length - 1; i >= 0; i--) {
             const marker = this.gameState.markers[i];
             if (marker.isDone) {
+                marker.mesh.dispose();
                 this.gameState.markers.splice(i, 1);
                 continue;
             }
@@ -647,6 +651,35 @@ export class MissileCommandScene implements CreateSceneClass {
                 }
             }
         }
+    }
+
+    private createPlusMarker(position: Vector3): Mesh {
+        const thickness = 0.3;
+        const length = 6;
+
+        const barX = MeshBuilder.CreateBox("markerBarX", {
+            width: length,
+            height: thickness,
+            depth: thickness
+        }, this.scene);
+
+        const barZ = MeshBuilder.CreateBox("markerBarZ", {
+            width: thickness,
+            height: thickness,
+            depth: length
+        }, this.scene);
+
+        const plusMesh = Mesh.MergeMeshes([barX, barZ], true, true, undefined, false, true)!;
+
+        const markerMaterial = new StandardMaterial("markerMaterial", this.scene);
+        markerMaterial.diffuseColor = new Color3(0, 0.2, 0);
+        markerMaterial.emissiveColor = new Color3(0, 1, 0);
+        plusMesh.material = markerMaterial;
+        plusMesh.isPickable = false;
+
+        plusMesh.position = new Vector3(position.x, Math.max(0.5, position.y), position.z);
+
+        return plusMesh;
     }
 
     private fireLaser(marker: Marker): void {
