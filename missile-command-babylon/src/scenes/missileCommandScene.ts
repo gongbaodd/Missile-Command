@@ -11,6 +11,7 @@ import { DirectionalLight } from "@babylonjs/core/Lights/directionalLight";
 import { ShadowGenerator } from "@babylonjs/core/Lights/Shadows/shadowGenerator";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
+import { LinesMesh } from "@babylonjs/core/Meshes/linesMesh";
 import { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
 
@@ -67,6 +68,12 @@ interface LaserSystem {
     target?: Vector3;
     shootTime: number;
     color: Color4;
+    // Animated beam state
+    beamMesh?: LinesMesh;
+    beamCurrentLength?: number;
+    beamTotalLength?: number;
+    beamDirection?: Vector3;
+    currentMarker?: Marker;
 }
 
 interface Marker {
@@ -453,14 +460,41 @@ export class MissileCommandScene implements CreateSceneClass {
         const availableLaser = this.findNearestAvailableLaser(position);
         if (availableLaser) {
             const markerMesh = this.createPlusMarker(position);
-            this.gameState.markers.push({
+            const marker: Marker = {
                 position,
                 time: 0,
                 isDone: false,
                 assignedLaser: availableLaser,
                 mesh: markerMesh
-            });
+            };
+            this.gameState.markers.push(marker);
+
+            // Initialize animated beam from laser to marker
             availableLaser.isBusy = true;
+            availableLaser.target = position.clone();
+            availableLaser.currentMarker = marker;
+
+            const start = new Vector3(availableLaser.position.x, 3.5, availableLaser.position.z);
+            const end = marker.mesh.position.clone();
+            const direction = end.subtract(start);
+            const totalLength = direction.length();
+            const normalizedDir = direction.normalize();
+
+            // Create an emissive green beam line with zero length (will animate)
+            const beam = MeshBuilder.CreateLines("laserBeam", {
+                points: [start, start],
+                updatable: true
+            }, this.scene);
+            const beamMaterial = new StandardMaterial("beamMaterial", this.scene);
+            beamMaterial.diffuseColor = new Color3(0, 0.2, 0);
+            beamMaterial.emissiveColor = new Color3(0, 1, 0);
+            beam.material = beamMaterial;
+            beam.isPickable = false;
+
+            availableLaser.beamMesh = beam;
+            availableLaser.beamCurrentLength = 0;
+            availableLaser.beamTotalLength = totalLength;
+            availableLaser.beamDirection = normalizedDir;
         }
     }
 
@@ -626,7 +660,7 @@ export class MissileCommandScene implements CreateSceneClass {
         const hitMaterial = new StandardMaterial("hitMaterial", this.scene);
         hitMaterial.diffuseColor = new Color3(1, 0, 0);
         house.mesh.material = hitMaterial;
-        
+
         // Remove house after delay
         setTimeout(() => {
             house.mesh.dispose();
@@ -634,15 +668,52 @@ export class MissileCommandScene implements CreateSceneClass {
     }
 
     private updateLasers(): void {
+        const deltaTimeSeconds = this.scene.getEngine().getDeltaTime() / 1000;
+        const beamSpeedUnitsPerSecond = 20; // controls how fast the beam grows
+
         for (const laser of this.gameState.lasers) {
-            if (laser.isBusy) {
-                laser.shootTime += this.scene.getEngine().getDeltaTime();
-                
-                // Simulate laser shooting
-                if (laser.shootTime > 1000) { // 1 second
-                    laser.isBusy = false;
-                    laser.shootTime = 0;
+            if (!laser.isBusy || !laser.target || !laser.beamMesh || !laser.beamDirection || laser.beamTotalLength === undefined) {
+                continue;
+            }
+
+            // Advance beam length
+            const currentLength = (laser.beamCurrentLength ?? 0) + beamSpeedUnitsPerSecond * deltaTimeSeconds;
+            const clampedLength = Math.min(currentLength, laser.beamTotalLength);
+            laser.beamCurrentLength = clampedLength;
+
+            const start = new Vector3(laser.position.x, 3.5, laser.position.z);
+            const end = start.add(laser.beamDirection.scale(clampedLength));
+
+            // Update line geometry in-place
+            MeshBuilder.CreateLines("laserBeam", {
+                points: [start, end],
+                instance: laser.beamMesh
+            }, this.scene);
+
+            // If beam reached the marker
+            if (clampedLength >= (laser.beamTotalLength ?? 0)) {
+                // Resolve marker hit
+                let marker = laser.currentMarker;
+                if (!marker) {
+                    marker = this.gameState.markers.find(m => !m.isDone && m.assignedLaser === laser);
                 }
+                if (marker) {
+                    this.fireLaser(marker);
+                    marker.isDone = true;
+                }
+
+                // Reset laser state and cleanup
+                if (laser.beamMesh) {
+                    laser.beamMesh.dispose();
+                }
+                laser.beamMesh = undefined;
+                laser.beamCurrentLength = 0;
+                laser.beamTotalLength = 0;
+                laser.beamDirection = undefined;
+                laser.isBusy = false;
+                laser.target = undefined;
+                laser.currentMarker = undefined;
+                laser.shootTime = 0;
             }
         }
     }
@@ -654,17 +725,6 @@ export class MissileCommandScene implements CreateSceneClass {
                 marker.mesh.dispose();
                 this.gameState.markers.splice(i, 1);
                 continue;
-            }
-            
-            marker.time += this.scene.getEngine().getDeltaTime();
-            
-            // Simulate laser travel time
-            if (marker.time > 2000) { // 2 seconds
-                this.fireLaser(marker);
-                marker.isDone = true;
-                if (marker.assignedLaser) {
-                    marker.assignedLaser.isBusy = false;
-                }
             }
         }
     }
