@@ -11,10 +11,7 @@ import { DirectionalLight } from "@babylonjs/core/Lights/directionalLight";
 import { ShadowGenerator } from "@babylonjs/core/Lights/Shadows/shadowGenerator";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
-import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
-import { Ray } from "@babylonjs/core/Culling/ray";
-import { PickingInfo } from "@babylonjs/core/Collisions/pickingInfo";
 
 import "@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent";
 import "@babylonjs/core/Culling/ray";
@@ -151,7 +148,7 @@ export class MissileCommandScene implements CreateSceneClass {
             Vector3.Zero(),
             this.scene
         );
-        this.camera.setTarget(Vector3.Zero());
+        this.camera.setTarget(new Vector3(0, 30, 0));
         this.camera.attachControl(canvas, true);
         this.camera.wheelPrecision = 50;
         this.camera.pinchPrecision = 50;
@@ -182,7 +179,7 @@ export class MissileCommandScene implements CreateSceneClass {
             tessellation: 32
         }, this.scene);
         
-        this.ground.position.y = -0.5;
+        this.ground.position.y = 0;
         
         // Ground material
         const groundMaterial = new StandardMaterial("groundMaterial", this.scene);
@@ -386,6 +383,7 @@ export class MissileCommandScene implements CreateSceneClass {
     }
 
     private addMarker(position: Vector3): void {
+
         // Find nearest available laser
         const availableLaser = this.findNearestAvailableLaser(position);
         if (availableLaser) {
