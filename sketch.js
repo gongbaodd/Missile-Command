@@ -329,6 +329,9 @@ class Houses {
       return h
     }).filter(h => !!h.pos)
 
+    // temperal set
+    window.__HOUSES__ = this.houses
+    window.__onHouseReady__()
   }
 
   isValidPlacement(pos, size, houses) {

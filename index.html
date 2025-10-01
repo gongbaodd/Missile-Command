@@ -15,8 +15,19 @@
     <div id="sketch"></div>
     <div id="root"></div>
   </main>
-  <script src="sketch.js"></script>
+  <script>
+      window.__HOUSES__ = []
+      window.__houseListeners__ = []
+      window.__onHouseReady__ = () => {
+        setTimeout(() => {
+          for (const func of window.__houseListeners__) {
+            func( window.__HOUSES__)
+          }
+        }, 1000)
+      }
+  </script>
   <script src="src/index.tsx" type="module"></script>
+  <script src="sketch.js" defer></script>
 </body>
 
 </html>

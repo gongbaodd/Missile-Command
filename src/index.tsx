@@ -18,7 +18,7 @@ if (import.meta.env.DEV && !(root instanceof HTMLElement)) {
 
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
-import { get, getDatabase, ref } from "firebase/database";
+import { get, getDatabase, ref, set } from "firebase/database";
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -38,7 +38,7 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
-const healthCheck = ref(db, "health_check");
+// const healthCheck = ref(db, "health_check");
 const roomsRef = ref(db, "room")
 
 // const isConnected = (await get(healthCheck)).val()
@@ -55,21 +55,12 @@ function generateRandomHash(): string {
   return hash;
 }
 
-// Check current hash
-const currentHash = window.location.hash.substring(1); // Remove the # symbol
+const newHash = generateRandomHash();
+window.location.hash = newHash;
+console.log('Generated new hash:', newHash);
 
-if (!currentHash) {
-  // Generate new hash and update URL
-  const newHash = generateRandomHash();
-  window.location.hash = newHash;
-  console.log('Generated new hash:', newHash);
-} else {
-  console.log('Current hash:', currentHash);
-  
-  // Check if the hash exists in rooms data
-  if (!rooms || !rooms[currentHash]) {
-    alert("error");
-  } else {
-    console.log('Room data for hash', currentHash, ':', rooms[currentHash]);
-  }
-}
+// @ts-ignore
+window.__houseListeners__.push(houses => {
+  const hs = JSON.parse(JSON.stringify(houses))
+  set(ref(db, `room/${newHash}`), hs)
+})
