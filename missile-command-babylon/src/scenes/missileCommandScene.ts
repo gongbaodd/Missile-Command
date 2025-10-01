@@ -228,7 +228,7 @@ export class MissileCommandScene implements CreateSceneClass {
                 }, this.scene);
                 
                 houseMesh.position = position;
-                houseMesh.position.y = size.y / 2;
+                houseMesh.position.y = + size.y / 2;
                 
                 // Random color
                 const colorIndex = Math.floor(Math.random() * COLORS.length);
@@ -238,8 +238,9 @@ export class MissileCommandScene implements CreateSceneClass {
                     COLORS[colorIndex].g,
                     COLORS[colorIndex].b
                 );
+                houseMaterial.alpha = 0.8;
                 houseMesh.material = houseMaterial;
-                houseMesh.receiveShadows = true;
+                // houseMesh.receiveShadows = true;
                 this.shadowGenerator.getShadowMap()!.renderList!.push(houseMesh);
                 
                 return {
@@ -302,40 +303,42 @@ export class MissileCommandScene implements CreateSceneClass {
     private createLaserMesh(position: Vector3): Mesh {
         // Create laser base (cylinder)
         const base = MeshBuilder.CreateCylinder("laserBase", {
-            height: 3,
-            diameter: 2
+            height: 5.6,
+            diameterTop: 0,
+            diameterBottom: 6,
         }, this.scene);
-        
-        base.position = position;
-        base.position.y = 1.5;
-        
+
+        base.position = position.clone();
+        base.position.y += 2.8;
+
         // Create laser head (cone)
         const head = MeshBuilder.CreateCylinder("laserHead", {
             height: 2,
-            diameterTop: 0,
-            diameterBottom: 1
+            diameterTop: 8,
+            diameterBottom: 0
         }, this.scene);
-        
-        head.position = position;
-        head.position.y = 3.5;
-        
-        // Merge base and head
-        const laserMesh = Mesh.MergeMeshes([base, head])!;
-        
+
+        head.position = position.clone();
+        head.position.y += 3.5;
+
+        // Merge base and head into one mesh
+        const laserMesh = Mesh.MergeMeshes([base, head], true, true, undefined, false, true)!;
+
         // Material
         const laserMaterial = new StandardMaterial("laserMaterial", this.scene);
         laserMaterial.diffuseColor = new Color3(0.3, 0.8, 0.3);
         laserMaterial.emissiveColor = new Color3(0.1, 0.3, 0.1);
         laserMesh.material = laserMaterial;
+
         laserMesh.receiveShadows = true;
         this.shadowGenerator.getShadowMap()!.renderList!.push(laserMesh);
-        
+
         return laserMesh;
     }
 
     private createCursor(): void {
         this.cursor = MeshBuilder.CreateSphere("cursor", { diameter: 0.5 }, this.scene);
-        this.cursor.isVisible = false;
+        this.cursor.isVisible = true;
         
         const cursorMaterial = new StandardMaterial("cursorMaterial", this.scene);
         cursorMaterial.diffuseColor = new Color3(1, 0.6, 0.4);
