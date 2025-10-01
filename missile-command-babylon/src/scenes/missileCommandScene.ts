@@ -378,7 +378,8 @@ export class MissileCommandScene implements CreateSceneClass {
     private handleMouseMove(): void {
         const pickInfo = this.scene.pick(
             this.scene.pointerX,
-            this.scene.pointerY
+            this.scene.pointerY,
+            (mesh) => mesh === this.ground
         );
 
         if (pickInfo?.hit && pickInfo.pickedMesh === this.ground) {
