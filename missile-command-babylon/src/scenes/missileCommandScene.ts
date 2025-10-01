@@ -88,6 +88,12 @@ export class MissileCommandScene implements CreateSceneClass {
     
     private ground!: Mesh;
     private cursor!: Mesh;
+    private cursorDot!: Mesh;
+    private isPointerDown: boolean = false;
+    private cursorDotDirection: 1 | -1 = 1;
+    private cursorDotSpeed: number = 40; // units per second (in local Y)
+    private cursorHalfHeight: number = 0;
+    private cursorDotRadius: number = 0;
     private camera!: ArcRotateCamera;
     private shadowGenerator!: ShadowGenerator;
     private missileSpawnTimer: number = 0;
@@ -351,12 +357,36 @@ export class MissileCommandScene implements CreateSceneClass {
         cursorMaterial.emissiveColor = new Color3(170/255, 243/255, 9/255);
         cursorMaterial.alpha = 0.6;
         this.cursor.material = cursorMaterial;
+
+        const sphereDiameter = 1.2;
+        const sphere = MeshBuilder.CreateSphere("cursorDot", { diameter: sphereDiameter, segments: 16 }, this.scene);
+        sphere.parent = cylinder;
+        this.cursorHalfHeight = cylinder.getBoundingInfo().boundingBox.extendSize.y;
+        this.cursorDotRadius = sphere.getBoundingInfo().boundingSphere.radius;
+        sphere.position.y = -this.cursorHalfHeight + this.cursorDotRadius;
+
+        const dotMaterial = new StandardMaterial("cursorDotMaterial", this.scene);
+        dotMaterial.diffuseColor = new Color3(1, 0, 0);
+        dotMaterial.emissiveColor = new Color3(0.5, 0, 0);
+        sphere.material = dotMaterial;
+        this.cursorDot = sphere;
     }
 
     private updateCursorPos(pos: Vector3): void {
         const p = pos.clone();
         p.y += 25;
         this.cursor.position = p;
+    }
+
+    private updateCursorVisibility(visible: boolean): void {
+        this.cursor.isVisible = visible;
+        this.cursorDot.isVisible = visible;
+    }
+
+    private resetCursorDot(): void {
+        this.cursorDot.position.y = -this.cursorHalfHeight + this.cursorDotRadius;
+        this.cursorDotDirection = 1;
+        this.cursorDotSpeed = 20;
     }
 
     private setupInputHandling(): void {
@@ -385,9 +415,9 @@ export class MissileCommandScene implements CreateSceneClass {
         if (pickInfo?.hit && pickInfo.pickedMesh === this.ground) {
             const position = pickInfo.pickedPoint!;
             this.updateCursorPos(position)
-            this.cursor.isVisible = true;
+            this.updateCursorVisibility(true);
         } else {
-            this.cursor.isVisible = false;
+            this.updateCursorVisibility(false);
         }
     }
 
@@ -397,10 +427,12 @@ export class MissileCommandScene implements CreateSceneClass {
             const position = pickInfo.pickedPoint!;
             this.addMarker(position);
         }
+        this.isPointerDown = true;
     }
 
-    private handleMouseUp(pointerInfo: any): void {
-        // Mouse up logic if needed
+    private handleMouseUp(_pointerInfo: any): void {
+        this.isPointerDown = false;
+        this.resetCursorDot();
     }
 
     private addMarker(position: Vector3): void {
@@ -447,7 +479,33 @@ export class MissileCommandScene implements CreateSceneClass {
         this.updateMissiles();
         this.updateLasers();
         this.updateMarkers();
+        this.updateCursorDot();
         this.checkGameOver();
+    }
+
+    private updateCursorDot(): void {
+        if (!this.cursorDot || !this.cursor) return;
+        if (!this.isPointerDown) {
+            this.resetCursorDot();
+            return;
+        }
+
+        const deltaTimeSeconds = this.scene.getEngine().getDeltaTime() / 1000;
+        const movement = this.cursorDotSpeed * deltaTimeSeconds * this.cursorDotDirection;
+
+        let newY = this.cursorDot.position.y + movement;
+        const minY = -this.cursorHalfHeight + this.cursorDotRadius;
+        const maxY = this.cursorHalfHeight - this.cursorDotRadius;
+
+        if (newY > maxY) {
+            newY = maxY;
+            this.cursorDotDirection = -1;
+        } else if (newY < minY) {
+            newY = minY;
+            this.cursorDotDirection = 1;
+        }
+
+        this.cursorDot.position.y = newY;
     }
 
     private updateMissiles(): void {
