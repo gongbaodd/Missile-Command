@@ -105,7 +105,6 @@ export class MissileCommandScene implements CreateSceneClass {
             import("@babylonjs/core/Debug/debugLayer"),
             import("@babylonjs/inspector"),
         ]).then((_values) => {
-            console.log(_values);
             this.scene.debugLayer.show({
                 handleResize: true,
                 overlay: true,
@@ -226,7 +225,8 @@ export class MissileCommandScene implements CreateSceneClass {
                     height: size.y,
                     depth: size.z
                 }, this.scene);
-                
+
+                houseMesh.isPickable = false;
                 houseMesh.position = position;
                 houseMesh.position.y = + size.y / 2;
                 
@@ -337,20 +337,33 @@ export class MissileCommandScene implements CreateSceneClass {
     }
 
     private createCursor(): void {
-        this.cursor = MeshBuilder.CreateSphere("cursor", { diameter: 0.5 }, this.scene);
-        this.cursor.isVisible = true;
+        const cylinder = MeshBuilder.CreateCylinder("cursor", {
+            height: 50,
+            diameter: 1.5,
+        }, this.scene);
+        cylinder.position.y += 10;
+
+        this.cursor = cylinder;
+        this.cursor.isVisible = false;
         
         const cursorMaterial = new StandardMaterial("cursorMaterial", this.scene);
         cursorMaterial.diffuseColor = new Color3(1, 0.6, 0.4);
-        cursorMaterial.emissiveColor = new Color3(0.2, 0.1, 0.05);
+        cursorMaterial.emissiveColor = new Color3(170/255, 243/255, 9/255);
+        cursorMaterial.alpha = 0.6;
         this.cursor.material = cursorMaterial;
+    }
+
+    private updateCursorPos(pos: Vector3): void {
+        const p = pos.clone();
+        p.y += 25;
+        this.cursor.position = p;
     }
 
     private setupInputHandling(): void {
         this.scene.onPointerObservable.add((pointerInfo) => {
             switch (pointerInfo.type) {
                 case PointerEventTypes.POINTERMOVE:
-                    this.handleMouseMove(pointerInfo);
+                    this.handleMouseMove();
                     break;
                 case PointerEventTypes.POINTERDOWN:
                     this.handleMouseDown(pointerInfo);
@@ -362,11 +375,15 @@ export class MissileCommandScene implements CreateSceneClass {
         });
     }
 
-    private handleMouseMove(pointerInfo: any): void {
-        const pickInfo = this.scene.pick(pointerInfo.x, pointerInfo.y);
+    private handleMouseMove(): void {
+        const pickInfo = this.scene.pick(
+            this.scene.pointerX,
+            this.scene.pointerY
+        );
+
         if (pickInfo?.hit && pickInfo.pickedMesh === this.ground) {
             const position = pickInfo.pickedPoint!;
-            this.cursor.position = position;
+            this.updateCursorPos(position)
             this.cursor.isVisible = true;
         } else {
             this.cursor.isVisible = false;
@@ -374,7 +391,7 @@ export class MissileCommandScene implements CreateSceneClass {
     }
 
     private handleMouseDown(pointerInfo: any): void {
-        const pickInfo = this.scene.pick(pointerInfo.x, pointerInfo.y);
+        const pickInfo = pointerInfo.pickInfo;
         if (pickInfo?.hit && pickInfo.pickedMesh === this.ground) {
             const position = pickInfo.pickedPoint!;
             this.addMarker(position);
