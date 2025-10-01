@@ -329,7 +329,7 @@ class Houses {
       return h
     }).filter(h => !!h.pos)
 
-    // temperal set
+    // TODO: remove this
     window.__HOUSES__ = this.houses
     window.__onHouseReady__()
   }
@@ -465,6 +465,10 @@ class Missiles {
 
       timeout && clearTimeout(timeout)
       timeout = setTimeout(missileInterval, interval)
+
+      // TODO: remove this 
+      window.__MISSILE___ = this.missiles;
+      window.__onMissileUpdate__();
     }
 
     missileInterval()

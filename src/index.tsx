@@ -64,3 +64,9 @@ window.__houseListeners__.push(houses => {
   const hs = JSON.parse(JSON.stringify(houses))
   set(ref(db, `room/${newHash}`), hs)
 })
+
+// @ts-ignore
+window.__missileListeners___.push(missiles => {
+  const ms = JSON.parse(JSON.stringify(missiles))
+  set(ref(db, `missile/${newHash}`), ms)
+})

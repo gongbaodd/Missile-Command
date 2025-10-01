@@ -25,6 +25,14 @@
           }
         }, 1000)
       }
+
+      window.__MISSILE___ = []
+      window.__missileListeners___ = []
+      window.__onMissileUpdate__ = () => {
+        for (const func of window.__missileListeners___) {
+          func(window.__MISSILE___)
+        }
+      }
   </script>
   <script src="src/index.tsx" type="module"></script>
   <script src="sketch.js" defer></script>
