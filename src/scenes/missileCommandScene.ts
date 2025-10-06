@@ -357,7 +357,18 @@ export class MissileCommandScene implements CreateSceneClass {
         
         if (remainingHouses === 0 || remainingLasers === 0) {
             this.gameState.isGameOver = true;
-            console.log("Game Over! Score:", this.gameState.score);
+			console.log("Game Over! Score:", this.gameState.score);
+			// Notify UI layer
+			try {
+				window.dispatchEvent(new CustomEvent("gameover", {
+					detail: {
+						score: this.gameState.score,
+						reason: remainingHouses === 0 ? "all-houses-destroyed" : "no-available-lasers"
+					}
+				}));
+			} catch (_e) {
+				// no-op: in non-browser envs
+			}
         }
     }
 }

@@ -34,7 +34,7 @@ function spawnMissile(ctx: SceneContext): void {
     const targetX = Math.random() * groundRadius * 2 - groundRadius;
     const targetZ = Math.random() * groundRadius * 2 - groundRadius;
 
-    const missileMesh = MeshBuilder.CreateSphere("missile", { diameter: 1 }, ctx.scene);
+    const missileMesh = MeshBuilder.CreateSphere("missile", { diameter: 2 }, ctx.scene);
     missileMesh.position = new Vector3(startX, startHeight, startZ);
 
     const missileMaterial = new StandardMaterial("missileMaterial", ctx.scene);

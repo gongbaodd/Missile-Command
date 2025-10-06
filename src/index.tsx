@@ -1,5 +1,5 @@
 import { render } from "solid-js/web";
-import { createSignal } from "solid-js";
+import { createSignal, onCleanup, onMount, Show } from "solid-js";
 import { Engine } from "@babylonjs/core/Engines/engine";
 import { WebGPUEngine } from "@babylonjs/core/Engines/webgpuEngine";
 import { getSceneModule } from "./createScene";
@@ -21,7 +21,7 @@ export const babylonInit = async (container: HTMLElement): Promise<void> => {
     const createSceneModule = getSceneModule();
     const engineType =
         location.search.split("engine=")[1]?.split("&")[0] || "webgl";
-    
+
     // Execute the pretasks, if defined
     await Promise.all(createSceneModule.preTasks || []);
     
@@ -69,10 +69,16 @@ export const babylonInit = async (container: HTMLElement): Promise<void> => {
 function App() {
     const [gameStarted, setGameStarted] = createSignal(false);
     const [isLoading, setIsLoading] = createSignal(false);
+    const [isGameOver, setIsGameOver] = createSignal(false);
+    const [finalScore, setFinalScore] = createSignal(0);
+    const [gameOverReason, setGameOverReason] = createSignal<string | undefined>(undefined);
 
     const startGame = async () => {
         setIsLoading(true);
         setGameStarted(true);
+        setIsGameOver(false);
+        setFinalScore(0);
+        setGameOverReason(undefined);
         try {
             const container = document.getElementById("game-container");
             if (container) {
@@ -84,6 +90,26 @@ function App() {
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleGameOver = (e: Event) => {
+        const ce = e as CustomEvent<{ score: number; reason?: string }>;
+        setFinalScore(ce.detail?.score ?? 0);
+        setGameOverReason(ce.detail?.reason);
+        setIsGameOver(true);
+    };
+
+    onMount(() => {
+        window.addEventListener("gameover", handleGameOver as EventListener);
+    });
+
+    onCleanup(() => {
+        window.removeEventListener("gameover", handleGameOver as EventListener);
+    });
+
+    const restart = () => {
+        // simplest: reload to reset scene and state
+        location.reload();
     };
 
     return (
@@ -114,8 +140,24 @@ function App() {
                     </button>
                 </div>
             ) : (
-                <div id="game-container" class="w-full h-full flex items-center justify-center">
-                    {/* Canvas will be appended here */}
+                <div class="relative w-full h-full flex items-center justify-center">
+                    <div id="game-container" class="w-full h-full flex items-center justify-center" />
+                    <Show when={isGameOver()}>
+                        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center">
+                            <div class="bg-slate-800 border border-slate-700 rounded-xl p-8 shadow-2xl text-center space-y-6 max-w-sm w-full mx-4">
+                                <h2 class="text-3xl font-bold text-white">Game Over</h2>
+                                <div class="text-gray-300">
+                                    <div class="text-lg">Score: <span class="font-semibold text-white">{finalScore()}</span></div>
+                                    <Show when={gameOverReason()}>
+                                        <div class="text-sm opacity-75 mt-1">Reason: {gameOverReason()}</div>
+                                    </Show>
+                                </div>
+                                <div class="flex gap-3 justify-center">
+                                    <button class="btn btn-primary" onClick={restart}>Restart</button>
+                                </div>
+                            </div>
+                        </div>
+                    </Show>
                 </div>
             )}
         </div>
