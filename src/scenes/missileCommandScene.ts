@@ -18,7 +18,7 @@ import "@babylonjs/core/Culling/ray";
 import type { GameState, SceneContext } from "./missileCommand/types";
 import { createGround as createGroundEnv, createHouses as createHousesEnv } from "./missileCommand/environment";
 import { createLaserSystems as createLaserSystemsSys, createPlusMarker as createPlusMarkerMesh, findNearestAvailableLaser as findNearestLaser, updateLasers as updateLasersSys } from "./missileCommand/lasers";
-import { updateMissiles as updateMissilesSys } from "./missileCommand/missiles";
+import { updateMissiles as updateMissilesSys, dropMissileAt } from "./missileCommand/missiles";
 
 export class MissileCommandScene implements CreateSceneClass {
     private scene!: Scene;
@@ -32,6 +32,7 @@ export class MissileCommandScene implements CreateSceneClass {
     };
     
     private ground!: Mesh;
+    private dropPanel!: Mesh;
     private cursor!: Mesh;
     private cursorDot!: Mesh;
     private isPointerDown: boolean = false;
@@ -82,6 +83,9 @@ export class MissileCommandScene implements CreateSceneClass {
 
         // Setup input handling
         this.setupInputHandling();
+
+        // Create drop panel
+        this.createDropPanel();
         
         // Start game loop
         this.startGameLoop();
@@ -131,6 +135,22 @@ export class MissileCommandScene implements CreateSceneClass {
 
     private createGround(): void {
         this.ground = createGroundEnv(this.getCtx());
+    }
+
+    private createDropPanel(): void {
+        // Match ground diameter (60) and set height small so it's a panel, positioned at y=75
+        this.dropPanel = MeshBuilder.CreateCylinder("dropPanel", {
+            height: 0.5,
+            diameter: 60,
+            tessellation: 32
+        }, this.scene);
+        this.dropPanel.position = new Vector3(0, 75, 0);
+
+        const mat = new StandardMaterial("dropPanelMaterial", this.scene);
+        mat.diffuseColor = new Color3(0.2, 0.2, 0.6);
+        mat.alpha = 0.15;
+        this.dropPanel.material = mat;
+        this.dropPanel.isPickable = true;
     }
 
     private createHouses(): void {
@@ -224,9 +244,9 @@ export class MissileCommandScene implements CreateSceneClass {
         const pickInfo = this.scene.pick(
             this.scene.pointerX,
             this.scene.pointerY,
-            (mesh) => mesh === this.ground
+            (mesh) => mesh === this.ground || mesh === this.dropPanel
         );
-        if (pickInfo?.hit && pickInfo.pickedMesh === this.ground) {
+        if (pickInfo?.hit && (pickInfo.pickedMesh === this.ground || pickInfo.pickedMesh === this.dropPanel)) {
             this.isPointerDown = true;
         }
 
@@ -236,12 +256,17 @@ export class MissileCommandScene implements CreateSceneClass {
         const pickInfo = this.scene.pick(
             this.scene.pointerX,
             this.scene.pointerY,
-            (mesh) => mesh === this.ground
+            (mesh) => mesh === this.ground || mesh === this.dropPanel
         );
-        if (pickInfo?.hit && pickInfo.pickedMesh === this.ground) {
+        if (pickInfo?.hit) {
             this.isPointerDown = false;
-            this.addMarker(this.cursorDot.getAbsolutePosition().clone());
-            this.resetCursorDot();
+            if (pickInfo.pickedMesh === this.dropPanel) {
+                const p = pickInfo.pickedPoint!;
+                dropMissileAt(this.getCtx(), p.x, p.z);
+            } else if (pickInfo.pickedMesh === this.ground) {
+                this.addMarker(this.cursorDot.getAbsolutePosition().clone());
+                this.resetCursorDot();
+            }
         }
     }
 

@@ -5,57 +5,42 @@ import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { COLORS, type Missile, type SceneContext } from "./types";
 import { saveHouses } from "./storage";
 
-export function updateMissiles(ctx: SceneContext, spawnIntervalMs: number, spawnTimerRef: { value: number }): void {
-    spawnTimerRef.value += ctx.scene.getEngine().getDeltaTime();
-    if (spawnTimerRef.value >= spawnIntervalMs) {
-        spawnMissile(ctx);
-        spawnTimerRef.value = 0;
-    }
-
-    for (let i = ctx.gameState.missiles.length - 1; i >= 0; i--) {
-        const missile = ctx.gameState.missiles[i];
-        if (!missile.isActive) {
-            ctx.gameState.missiles.splice(i, 1);
-            continue;
-        }
-        updateMissile(ctx, missile);
-    }
+export function updateMissiles(ctx: SceneContext, _spawnIntervalMs: number, _spawnTimerRef: { value: number }): void {
+	// Auto-spawn removed. Only update existing missiles.
+	for (let i = ctx.gameState.missiles.length - 1; i >= 0; i--) {
+		const missile = ctx.gameState.missiles[i];
+		if (!missile.isActive) {
+			ctx.gameState.missiles.splice(i, 1);
+			continue;
+		}
+		updateMissile(ctx, missile);
+	}
 }
 
-function spawnMissile(ctx: SceneContext): void {
-    const groundRadius = 30;
-    const startHeight = 60;
+export function dropMissileAt(ctx: SceneContext, x: number, z: number): void {
+	const startHeight = 75;
+	const missileMesh = MeshBuilder.CreateSphere("missile", { diameter: 2 }, ctx.scene);
+	missileMesh.position = new Vector3(x, startHeight, z);
 
-    const angle = Math.random() * Math.PI * 2;
-    const distance = Math.random() * groundRadius;
-    const startX = Math.cos(angle) * distance;
-    const startZ = Math.sin(angle) * distance;
+	const missileMaterial = new StandardMaterial("missileMaterial", ctx.scene);
+	const colorIndex = Math.floor(Math.random() * COLORS.length);
+	missileMaterial.diffuseColor = new Color3(
+		COLORS[colorIndex].r,
+		COLORS[colorIndex].g,
+		COLORS[colorIndex].b
+	);
+	missileMesh.material = missileMaterial;
 
-    const targetX = Math.random() * groundRadius * 2 - groundRadius;
-    const targetZ = Math.random() * groundRadius * 2 - groundRadius;
-
-    const missileMesh = MeshBuilder.CreateSphere("missile", { diameter: 2 }, ctx.scene);
-    missileMesh.position = new Vector3(startX, startHeight, startZ);
-
-    const missileMaterial = new StandardMaterial("missileMaterial", ctx.scene);
-    const colorIndex = Math.floor(Math.random() * COLORS.length);
-    missileMaterial.diffuseColor = new Color3(
-        COLORS[colorIndex].r,
-        COLORS[colorIndex].g,
-        COLORS[colorIndex].b
-    );
-    missileMesh.material = missileMaterial;
-
-    ctx.gameState.missiles.push({
-        mesh: missileMesh,
-        position: missileMesh.position.clone(),
-        target: new Vector3(targetX, 0, targetZ),
-        speed: 0.01,
-        verticalVelocity: 0,
-        isActive: true,
-        isHit: false,
-        color: COLORS[colorIndex]
-    });
+	ctx.gameState.missiles.push({
+		mesh: missileMesh,
+		position: missileMesh.position.clone(),
+		target: new Vector3(x, 0, z),
+		speed: 0, // no horizontal movement; pure drop
+		verticalVelocity: 0,
+		isActive: true,
+		isHit: false,
+		color: COLORS[colorIndex]
+	});
 }
 
 function updateMissile(ctx: SceneContext, missile: Missile): void {
