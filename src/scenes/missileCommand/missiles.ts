@@ -3,7 +3,7 @@ import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { COLORS, type Missile, type SceneContext } from "./types";
-import { saveHouses } from "./storage";
+import { saveRoomData } from "./firebase";
 
 export function updateMissiles(ctx: SceneContext, _spawnIntervalMs: number, _spawnTimerRef: { value: number }): void {
 	// Auto-spawn removed. Only update existing missiles.
@@ -104,8 +104,8 @@ function hitHouse(ctx: SceneContext, house: any): void {
         house.mesh.dispose();
     }, 1000);
 
-    // persist houses to storage
-    saveHouses(ctx.gameState.houses);
+    // persist game state to Firebase
+    saveRoomData(ctx.gameState.houses, ctx.gameState.missiles);
 }
 
 

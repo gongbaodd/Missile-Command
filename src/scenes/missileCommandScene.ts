@@ -76,7 +76,7 @@ export class MissileCommandScene implements CreateSceneClass {
         this.createLaserSystems();
 
         // Create houses
-        this.createHouses();
+        await this.createHouses();
 
         // Create cursor
         this.createCursor();
@@ -153,8 +153,8 @@ export class MissileCommandScene implements CreateSceneClass {
         this.dropPanel.isPickable = true;
     }
 
-    private createHouses(): void {
-        createHousesEnv(this.getCtx());
+    private async createHouses(): Promise<void> {
+        await createHousesEnv(this.getCtx());
     }
 
     private createLaserSystems(): void {

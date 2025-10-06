@@ -4,7 +4,7 @@ import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { COLORS, type House, type SceneContext } from "./types";
-import { loadHouses, saveHouses, type SerializedHouse } from "./storage";
+import { loadRoomData, saveRoomData, type SerializedHouse } from "./firebase";
 
 export function createGround(ctx: SceneContext): Mesh {
     const ground = MeshBuilder.CreateCylinder("ground", {
@@ -24,12 +24,12 @@ export function createGround(ctx: SceneContext): Mesh {
     return ground;
 }
 
-export function createHouses(ctx: SceneContext): void {
-    const loaded = loadHouses();
-    if (loaded && loaded.length > 0) {
-        rebuildHousesFromStorage(ctx, loaded);
+export async function createHouses(ctx: SceneContext): Promise<void> {
+    const loaded = await loadRoomData();
+    if (loaded && loaded.houses && loaded.houses.length > 0) {
+        rebuildHousesFromStorage(ctx, loaded.houses);
         // Ensure we save back to normalize format/version
-        saveHouses(ctx.gameState.houses);
+        await saveRoomData(ctx.gameState.houses, ctx.gameState.missiles);
         return;
     }
 
@@ -43,7 +43,7 @@ export function createHouses(ctx: SceneContext): void {
         }
     }
 
-    saveHouses(ctx.gameState.houses);
+    await saveRoomData(ctx.gameState.houses, ctx.gameState.missiles);
 }
 
 function rebuildHousesFromStorage(ctx: SceneContext, serialized: SerializedHouse[]): void {

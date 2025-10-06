@@ -4,6 +4,7 @@ import { Engine } from "@babylonjs/core/Engines/engine";
 import { WebGPUEngine } from "@babylonjs/core/Engines/webgpuEngine";
 import { getSceneModule } from "./createScene";
 import { AbstractEngine } from "@babylonjs/core/Engines/abstractEngine";
+import { generateRandomHash } from "./utils/roomNumber";
 import "./index.css";
 
 // Create the renderCanvas element
@@ -79,6 +80,12 @@ function App() {
         setIsGameOver(false);
         setFinalScore(0);
         setGameOverReason(undefined);
+        
+        // Generate a random hash and navigate to it
+        const roomHash = generateRandomHash();
+        window.location.hash = roomHash;
+        console.log("Generated room hash:", roomHash);
+        
         try {
             const container = document.getElementById("game-container");
             if (container) {
