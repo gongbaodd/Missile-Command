@@ -4,6 +4,7 @@ import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { COLORS, type House, type SceneContext } from "./types";
+import { loadHouses, saveHouses, type SerializedHouse } from "./storage";
 
 export function createGround(ctx: SceneContext): Mesh {
     const ground = MeshBuilder.CreateCylinder("ground", {
@@ -24,6 +25,14 @@ export function createGround(ctx: SceneContext): Mesh {
 }
 
 export function createHouses(ctx: SceneContext): void {
+    const loaded = loadHouses();
+    if (loaded && loaded.length > 0) {
+        rebuildHousesFromStorage(ctx, loaded);
+        // Ensure we save back to normalize format/version
+        saveHouses(ctx.gameState.houses);
+        return;
+    }
+
     const numHouses = 10;
     const groundRadius = 30;
 
@@ -32,6 +41,62 @@ export function createHouses(ctx: SceneContext): void {
         if (house) {
             ctx.gameState.houses.push(house);
         }
+    }
+
+    saveHouses(ctx.gameState.houses);
+}
+
+function rebuildHousesFromStorage(ctx: SceneContext, serialized: SerializedHouse[]): void {
+    const groundRadius = 30;
+    for (const sh of serialized) {
+        const position = new Vector3(sh.position.x, sh.position.y, sh.position.z);
+        // Clamp to ground just in case of data drift
+        const distanceFromCenter = Math.sqrt(position.x * position.x + position.z * position.z);
+        if (distanceFromCenter > groundRadius) {
+            const scale = groundRadius / distanceFromCenter;
+            position.x *= scale;
+            position.z *= scale;
+        }
+        const size = new Vector3(sh.size.x, sh.size.y, sh.size.z);
+
+        // Recreate house mesh only if not destroyed
+        let houseMesh: Mesh | null = null;
+        if (!sh.isDestroyed) {
+            houseMesh = MeshBuilder.CreateBox("house", {
+                width: size.x,
+                height: size.y,
+                depth: size.z
+            }, ctx.scene);
+            houseMesh.isPickable = false;
+            houseMesh.position = position.clone();
+            houseMesh.position.y = + size.y / 2;
+
+            const houseMaterial = new StandardMaterial("houseMaterial", ctx.scene);
+            houseMaterial.diffuseColor = new Color3(
+                sh.color.r,
+                sh.color.g,
+                sh.color.b
+            );
+            houseMaterial.alpha = 0.8;
+            houseMesh.material = houseMaterial;
+            ctx.shadowGenerator.getShadowMap()!.renderList!.push(houseMesh);
+        }
+
+        const house: House = {
+            mesh: (houseMesh ?? MeshBuilder.CreateBox("house_destroyed_placeholder", { width: 0.01, height: 0.01, depth: 0.01 }, ctx.scene)),
+            position,
+            size,
+            color: new Color3(sh.color.r, sh.color.g, sh.color.b) as any, // will not be used directly
+            isHit: sh.isDestroyed,
+            isDestroyed: sh.isDestroyed
+        } as unknown as House;
+
+        // If using placeholder for destroyed, dispose it to not render anything
+        if (sh.isDestroyed && house.mesh) {
+            house.mesh.dispose();
+        }
+
+        ctx.gameState.houses.push(house);
     }
 }
 

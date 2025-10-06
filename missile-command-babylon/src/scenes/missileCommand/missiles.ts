@@ -3,6 +3,7 @@ import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { COLORS, type Missile, type SceneContext } from "./types";
+import { saveHouses } from "./storage";
 
 export function updateMissiles(ctx: SceneContext, spawnIntervalMs: number, spawnTimerRef: { value: number }): void {
     spawnTimerRef.value += ctx.scene.getEngine().getDeltaTime();
@@ -103,6 +104,9 @@ function hitHouse(ctx: SceneContext, house: any): void {
     setTimeout(() => {
         house.mesh.dispose();
     }, 1000);
+
+    // persist houses to storage
+    saveHouses(ctx.gameState.houses);
 }
 
 
