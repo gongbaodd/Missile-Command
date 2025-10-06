@@ -698,7 +698,34 @@ export class MissileCommandScene implements CreateSceneClass {
                     marker = this.gameState.markers.find(m => !m.isDone && m.assignedLaser === laser);
                 }
                 if (marker) {
-                    this.fireLaser(marker);
+                    // Visual explosion: big yellow sphere (radius 5) that stays temporarily
+                    const explosionRadius = 5;
+                    const explosion = MeshBuilder.CreateSphere("explosion", { diameter: explosionRadius * 2, segments: 16 }, this.scene);
+                    const explosionCenter = marker.mesh.getAbsolutePosition().clone();
+                    explosion.position.copyFrom(explosionCenter);
+                    const explosionMaterial = new StandardMaterial("explosionMaterial", this.scene);
+                    explosionMaterial.diffuseColor = new Color3(1, 1, 0);
+                    explosionMaterial.emissiveColor = new Color3(1, 1, 0);
+                    explosionMaterial.alpha = 0.6;
+                    explosion.material = explosionMaterial;
+                    explosion.isPickable = false;
+
+                    // Destroy all missiles inside the sphere
+                    for (let i = this.gameState.missiles.length - 1; i >= 0; i--) {
+                        const missile = this.gameState.missiles[i];
+                        if (!missile.isActive) continue;
+                        const distance = Vector3.Distance(missile.position, explosionCenter);
+                        if (distance <= explosionRadius) {
+                            this.explodeMissile(missile);
+                            this.gameState.score += 10;
+                        }
+                    }
+
+                    // Cleanup explosion sphere after delay
+                    setTimeout(() => {
+                        explosion.dispose();
+                    }, 800);
+
                     marker.isDone = true;
                 }
 
@@ -762,21 +789,7 @@ export class MissileCommandScene implements CreateSceneClass {
         return plusMesh;
     }
 
-    private fireLaser(marker: Marker): void {
-        // Check if any missiles are in the explosion radius
-        const explosionRadius = 10;
-        
-        for (let i = this.gameState.missiles.length - 1; i >= 0; i--) {
-            const missile = this.gameState.missiles[i];
-            if (!missile.isActive) continue;
-            
-            const distance = Vector3.Distance(missile.position, marker.position);
-            if (distance < explosionRadius) {
-                this.explodeMissile(missile);
-                this.gameState.score += 10;
-            }
-        }
-    }
+    
 
     private checkGameOver(): void {
         const remainingHouses = this.gameState.houses.filter(h => !h.isDestroyed).length;
