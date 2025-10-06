@@ -171,6 +171,20 @@ function isValidHousePosition(ctx: SceneContext, position: Vector3, size: Vector
         }
     }
 
+    // Avoid placing houses too close to laser systems
+    // Laser base has diameter ~6 (radius ~3). Keep a small safety margin.
+    const houseRadius = Math.max(size.x, size.z) / 2;
+    const laserSafetyRadius = 4; // base radius (3) + 1 unit margin
+
+    for (const laser of ctx.gameState.lasers) {
+        const dx = position.x - laser.position.x;
+        const dz = position.z - laser.position.z;
+        const distanceXZ = Math.sqrt(dx * dx + dz * dz);
+        if (distanceXZ < houseRadius + laserSafetyRadius) {
+            return false;
+        }
+    }
+
     return true;
 }
 

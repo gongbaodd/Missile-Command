@@ -70,13 +70,13 @@ export class MissileCommandScene implements CreateSceneClass {
         
         // Create ground
         this.createGround();
-        
-        // Create houses
-        this.createHouses();
-        
+
         // Create laser systems
         this.createLaserSystems();
-        
+
+        // Create houses
+        this.createHouses();
+
         // Create cursor
         this.createCursor();
         
