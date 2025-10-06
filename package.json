@@ -1,35 +1,31 @@
 {
-  "name": "missile-command",
+  "name": "missile-command-babylon",
   "version": "1.0.0",
-  "description": "",
-  "main": "schetch.js",
+  "private": true,
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "vite",
-    "build": "vite build && npm run cpx",
-    "cpx": "cpx ./sketch.js ./dist"
+    "build": "rsbuild build",
+    "check": "biome check --write",
+    "dev": "rsbuild dev --open",
+    "format": "biome format --write",
+    "preview": "rsbuild preview"
   },
-  "author": "",
-  "license": "ISC",
   "devDependencies": {
-    "@types/dat.gui": "^0.7.13",
-    "@types/p5": "^1.7.6",
-    "daisyui": "^5.1.25",
-    "vite": "^5.4.11"
+    "@biomejs/biome": "2.2.3",
+    "@rsbuild/core": "^1.5.6",
+    "@tailwindcss/postcss": "^4.1.14",
+    "daisyui": "^5.1.27",
+    "tailwindcss": "^4.1.14",
+    "typescript": "^5.9.2"
   },
   "dependencies": {
+    "@babylonjs/core": "^8.29.0",
     "@babylonjs/inspector": "^8.29.0",
-    "@tailwindcss/vite": "^4.1.13",
-    "cpx": "^1.5.0",
-    "dat.gui": "^0.7.9",
-    "firebase": "^12.3.0",
-    "nanostores": "^1.0.1",
-    "npx": "^10.2.2",
-    "p5": "^2.0.5",
-    "solid-devtools": "^0.34.3",
-    "solid-js": "^1.9.9",
-    "tailwindcss": "^4.1.13",
-    "vite-plugin-solid": "^2.11.8"
+    "@babylonjs/loaders": "^8.29.0",
+    "@babylonjs/materials": "^8.29.0",
+    "@rsbuild/plugin-babel": "^1.0.6",
+    "@rsbuild/plugin-solid": "^1.0.6",
+    "recast-detour": "^1.6.4",
+    "solid-js": "^1.9.9"
   }
 }
