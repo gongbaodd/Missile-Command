@@ -20,8 +20,10 @@ const createRenderCanvas = (): HTMLCanvasElement => {
     return canvas;
 };
 
-export const babylonInit = async (container: HTMLElement): Promise<void> => {
-    const createSceneModule = getSceneModule();
+export const babylonInit = async (container: HTMLElement, playerRole?: PlayerRole): Promise<void> => {
+
+    console.log("playerRole", playerRole);
+    const createSceneModule = getSceneModule(playerRole);
     const engineType =
         location.search.split("engine=")[1]?.split("&")[0] || "webgl";
 
@@ -145,7 +147,7 @@ function App() {
 
             const container = document.getElementById("game-container");
             if (container) {
-                await babylonInit(container);
+                await babylonInit(container, PlayerRole.DEFENDER);
                 console.log("Babylon.js scene initialized successfully");
             }
         } catch (error) {
@@ -165,7 +167,7 @@ function App() {
         try {
             const container = document.getElementById("game-container");
             if (container) {
-                await babylonInit(container);
+                await babylonInit(container, playerRole() || PlayerRole.DEFENDER);
                 console.log("Babylon.js scene initialized successfully");
             }
         } catch (error) {

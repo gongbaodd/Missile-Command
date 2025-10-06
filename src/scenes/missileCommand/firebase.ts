@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getInstallations, getId as getInstallationId } from "firebase/installations";
-import { getDatabase, ref, set, get, onValue, update } from "firebase/database";
+import { getDatabase, ref, set, get, onValue, update, push } from "firebase/database";
 import type { House, Missile } from "./types";
 import { PlayerRole } from "./types";
 
@@ -41,6 +41,7 @@ export interface SerializedHouse {
 }
 
 export interface SerializedMissile {
+    id?: string;
 	position: SerializedVector3;
 	target: SerializedVector3;
 	speed: number;
@@ -84,6 +85,7 @@ export function serializeHouses(houses: House[]): SerializedHouse[] {
 // Serialize missiles for Firebase storage
 export function serializeMissiles(missiles: Missile[]): SerializedMissile[] {
 	return missiles.map((m) => ({
+        id: m.id,
 		position: { x: m.position.x, y: m.position.y, z: m.position.z },
 		target: { x: m.target.x, y: m.target.y, z: m.target.z },
 		speed: m.speed,
@@ -172,6 +174,35 @@ export function listenToRoomData(callback: (data: SerializedRoomData | null) => 
 	});
 	
 	return unsubscribe;
+}
+
+// Emit a missile spawn event at rooms/{roomHash}/events/missiles with unique id
+export async function emitMissileSpawn(x: number, z: number): Promise<void> {
+    try {
+        const roomHash = getRoomHash();
+        const eventsRef = ref(db, `rooms/${roomHash}/events/missiles`);
+        await push(eventsRef, {
+            x,
+            z,
+            t: Date.now()
+        });
+    } catch (error) {
+        console.error("Failed to emit missile spawn:", error);
+    }
+}
+
+// Listen for missile spawn events; caller handles spawning in scene
+export function listenForMissileSpawns(callback: (x: number, z: number, eventKey: string) => void): () => void {
+    const roomHash = getRoomHash();
+    const eventsRef = ref(db, `rooms/${roomHash}/events/missiles`);
+    const unsubscribe = onValue(eventsRef, (snapshot) => {
+        if (!snapshot.exists()) return;
+        const value = snapshot.val() as Record<string, { x: number; z: number; t: number }>;
+        for (const [key, evt] of Object.entries(value)) {
+            callback(evt.x, evt.z, key);
+        }
+    });
+    return unsubscribe;
 }
 
 // Register the current client as a player in the room with role and fid

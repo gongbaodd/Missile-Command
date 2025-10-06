@@ -5,6 +5,7 @@ import type { Scene } from "@babylonjs/core/scene";
 // import { NavigationMeshRecast } from "./scenes/navigationMeshRecast";
 import { MissileCommandScene } from "./scenes/missileCommandScene";
 import { AbstractEngine } from "@babylonjs/core/Engines/abstractEngine";
+import { PlayerRole } from "./scenes/missileCommand/types";
 
 export interface CreateSceneClass {
     createScene: (engine: AbstractEngine, canvas: HTMLCanvasElement) => Promise<Scene>;
@@ -15,7 +16,11 @@ export interface CreateSceneModule {
     default: CreateSceneClass;
 }
 
-export const getSceneModule = (): CreateSceneClass => {
-    return new MissileCommandScene();
+export const getSceneModule = (playerRole?: PlayerRole): CreateSceneClass => {
+    const scene = new MissileCommandScene();
+    if (playerRole) {
+        scene.setPlayerRole(playerRole);
+    }
+    return scene;
     // return new DefaultSceneWithTexture();
 }

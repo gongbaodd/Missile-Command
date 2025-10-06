@@ -31,7 +31,7 @@ export function dropMissileAt(ctx: SceneContext, x: number, z: number): void {
 	);
 	missileMesh.material = missileMaterial;
 
-	ctx.gameState.missiles.push({
+    const missile: Missile = {
 		mesh: missileMesh,
 		position: missileMesh.position.clone(),
 		target: new Vector3(x, 0, z),
@@ -39,8 +39,13 @@ export function dropMissileAt(ctx: SceneContext, x: number, z: number): void {
 		verticalVelocity: 0,
 		isActive: true,
 		isHit: false,
-		color: COLORS[colorIndex]
-	});
+        color: COLORS[colorIndex],
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    };
+    ctx.gameState.missiles.push(missile);
+
+    // persist spawn immediately so other clients can reflect state
+    saveRoomData(ctx.gameState.houses, ctx.gameState.missiles);
 }
 
 function updateMissile(ctx: SceneContext, missile: Missile): void {

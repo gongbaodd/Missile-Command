@@ -11,14 +11,17 @@ import { DirectionalLight } from "@babylonjs/core/Lights/directionalLight";
 import { ShadowGenerator } from "@babylonjs/core/Lights/Shadows/shadowGenerator";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
+import { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
 
 import "@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent";
 import "@babylonjs/core/Culling/ray";
 import type { GameState, SceneContext } from "./missileCommand/types";
+import { PlayerRole } from "./missileCommand/types";
 import { createGround as createGroundEnv, createHouses as createHousesEnv } from "./missileCommand/environment";
 import { createLaserSystems as createLaserSystemsSys, createPlusMarker as createPlusMarkerMesh, findNearestAvailableLaser as findNearestLaser, updateLasers as updateLasersSys } from "./missileCommand/lasers";
 import { updateMissiles as updateMissilesSys, dropMissileAt } from "./missileCommand/missiles";
+import { listenForMissileSpawns, emitMissileSpawn } from "./missileCommand/firebase";
 
 export class MissileCommandScene implements CreateSceneClass {
     private scene!: Scene;
@@ -30,6 +33,7 @@ export class MissileCommandScene implements CreateSceneClass {
         isGameOver: false,
         score: 0
     };
+    private playerRole: PlayerRole = PlayerRole.DEFENDER; // Default to defender
     
     private ground!: Mesh;
     private dropPanel!: Mesh;
@@ -44,6 +48,37 @@ export class MissileCommandScene implements CreateSceneClass {
     private shadowGenerator!: ShadowGenerator;
     private missileSpawnInterval: number = 3000; // 3 seconds
     private missileSpawnTimerRef = { value: 0 };
+
+    setPlayerRole(role: PlayerRole): void {
+        this.playerRole = role;
+    }
+
+    private canPlayerInteractWithMesh(mesh: AbstractMesh): boolean {
+        if (this.playerRole === PlayerRole.DEFENDER && mesh === this.ground) {
+            return true;
+        }
+        if (this.playerRole === PlayerRole.ATTACKER && mesh === this.dropPanel) {
+            return true;
+        }
+        return false;
+    }
+
+    private getPickInfoForPlayerRole(): any {
+        if (this.playerRole === PlayerRole.DEFENDER) {
+            return this.scene.pick(
+                this.scene.pointerX,
+                this.scene.pointerY,
+                (mesh) => mesh === this.ground
+            );
+        } else if (this.playerRole === PlayerRole.ATTACKER) {
+            return this.scene.pick(
+                this.scene.pointerX,
+                this.scene.pointerY,
+                (mesh) => mesh === this.dropPanel
+            );
+        }
+        return null;
+    }
 
     createScene = async (
         engine: AbstractEngine,
@@ -89,6 +124,18 @@ export class MissileCommandScene implements CreateSceneClass {
         
         // Start game loop
         this.startGameLoop();
+
+        // Listen to cross-client missile spawns and spawn locally once per event
+        try {
+            const seenSpawnEvents = new Set<string>();
+            listenForMissileSpawns((x, z, key) => {
+                if (seenSpawnEvents.has(key)) return;
+                seenSpawnEvents.add(key);
+                dropMissileAt(this.getCtx(), x, z);
+            });
+        } catch (_e) {
+            // ignore listener failures in non-browser envs
+        }
 
         return this.scene;
     };
@@ -225,17 +272,19 @@ export class MissileCommandScene implements CreateSceneClass {
     }
 
     private handleMouseMove(): void {
-        const pickInfo = this.scene.pick(
-            this.scene.pointerX,
-            this.scene.pointerY,
-            (mesh) => mesh === this.ground
-        );
+        // Only show cursor for defenders when hovering over ground
+        if (this.playerRole === PlayerRole.DEFENDER) {
+            const pickInfo = this.getPickInfoForPlayerRole();
 
-        if (pickInfo?.hit && pickInfo.pickedMesh === this.ground) {
-            const position = pickInfo.pickedPoint!;
-            this.updateCursorPos(position)
-            this.updateCursorVisibility(true);
+            if (pickInfo?.hit && this.canPlayerInteractWithMesh(pickInfo.pickedMesh)) {
+                const position = pickInfo.pickedPoint!;
+                this.updateCursorPos(position)
+                this.updateCursorVisibility(true);
+            } else {
+                this.updateCursorVisibility(false);
+            }
         } else {
+            // Attackers don't see cursor on mouse move
             this.updateCursorVisibility(false);
         }
     }
@@ -246,10 +295,10 @@ export class MissileCommandScene implements CreateSceneClass {
             this.scene.pointerY,
             (mesh) => mesh === this.ground || mesh === this.dropPanel
         );
-        if (pickInfo?.hit && (pickInfo.pickedMesh === this.ground || pickInfo.pickedMesh === this.dropPanel)) {
+        
+        if (pickInfo?.hit && pickInfo.pickedMesh && this.canPlayerInteractWithMesh(pickInfo.pickedMesh)) {
             this.isPointerDown = true;
         }
-
     }
 
     private handleMouseUp(): void {
@@ -260,12 +309,19 @@ export class MissileCommandScene implements CreateSceneClass {
         );
         if (pickInfo?.hit) {
             this.isPointerDown = false;
-            if (pickInfo.pickedMesh === this.dropPanel) {
-                const p = pickInfo.pickedPoint!;
-                dropMissileAt(this.getCtx(), p.x, p.z);
-            } else if (pickInfo.pickedMesh === this.ground) {
-                this.addMarker(this.cursorDot.getAbsolutePosition().clone());
-                this.resetCursorDot();
+            
+            if (pickInfo.pickedMesh && this.canPlayerInteractWithMesh(pickInfo.pickedMesh)) {
+                if (pickInfo.pickedMesh === this.dropPanel) {
+                    // Only attackers can click the drop panel
+                    const p = pickInfo.pickedPoint!;
+                        dropMissileAt(this.getCtx(), p.x, p.z);
+                        // Emit event so all clients spawn it
+                        emitMissileSpawn(p.x, p.z);
+                } else if (pickInfo.pickedMesh === this.ground) {
+                    // Only defenders can click the ground
+                    this.addMarker(this.cursorDot.getAbsolutePosition().clone());
+                    this.resetCursorDot();
+                }
             }
         }
     }
@@ -371,10 +427,6 @@ export class MissileCommandScene implements CreateSceneClass {
             }
         }
     }
-
-    
-
-    
 
     private checkGameOver(): void {
         const remainingHouses = this.gameState.houses.filter(h => !h.isDestroyed).length;

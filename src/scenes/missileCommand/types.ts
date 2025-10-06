@@ -36,6 +36,8 @@ export interface Missile {
 	isActive: boolean;
 	isHit: boolean;
 	color: Color4;
+    // Optional unique identifier for cross-client sync
+    id?: string;
 }
 
 export interface Marker {
