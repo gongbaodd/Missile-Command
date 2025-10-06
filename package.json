@@ -25,6 +25,7 @@
     "@babylonjs/materials": "^8.29.0",
     "@rsbuild/plugin-babel": "^1.0.6",
     "@rsbuild/plugin-solid": "^1.0.6",
+    "firebase": "^12.3.0",
     "recast-detour": "^1.6.4",
     "solid-js": "^1.9.9"
   }
