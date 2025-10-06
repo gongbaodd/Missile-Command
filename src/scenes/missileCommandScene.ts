@@ -36,12 +36,12 @@ export class MissileCommandScene implements CreateSceneClass {
     private cursorDot!: Mesh;
     private isPointerDown: boolean = false;
     private cursorDotDirection: 1 | -1 = 1;
-    private cursorDotSpeed: number = 40; // units per second (in local Y)
+    private cursorDotSpeed: number = 80; // units per second (in local Y)
     private cursorHalfHeight: number = 0;
     private cursorDotRadius: number = 0;
     private camera!: ArcRotateCamera;
     private shadowGenerator!: ShadowGenerator;
-    private missileSpawnInterval: number = 2000; // 2 seconds
+    private missileSpawnInterval: number = 3000; // 3 seconds
     private missileSpawnTimerRef = { value: 0 };
 
     createScene = async (
@@ -79,7 +79,7 @@ export class MissileCommandScene implements CreateSceneClass {
 
         // Create cursor
         this.createCursor();
-        
+
         // Setup input handling
         this.setupInputHandling();
         

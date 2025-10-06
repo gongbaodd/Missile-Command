@@ -24,7 +24,7 @@ export function updateMissiles(ctx: SceneContext, spawnIntervalMs: number, spawn
 
 function spawnMissile(ctx: SceneContext): void {
     const groundRadius = 30;
-    const startHeight = 50;
+    const startHeight = 60;
 
     const angle = Math.random() * Math.PI * 2;
     const distance = Math.random() * groundRadius;
@@ -50,7 +50,8 @@ function spawnMissile(ctx: SceneContext): void {
         mesh: missileMesh,
         position: missileMesh.position.clone(),
         target: new Vector3(targetX, 0, targetZ),
-        speed: 0.02,
+        speed: 0.01,
+        verticalVelocity: 0,
         isActive: true,
         isHit: false,
         color: COLORS[colorIndex]
@@ -60,11 +61,24 @@ function spawnMissile(ctx: SceneContext): void {
 function updateMissile(ctx: SceneContext, missile: Missile): void {
     if (missile.isHit) return;
 
-    const direction = missile.target.subtract(missile.position).normalize();
     const deltaTime = ctx.scene.getEngine().getDeltaTime() / 1000;
-    const movement = direction.scale(missile.speed * deltaTime * 100);
 
-    missile.position.addInPlace(movement);
+    // Horizontal steering towards target (ignore vertical axis for direction)
+    const toTarget = missile.target.subtract(missile.position);
+    const horizontalDir = new Vector3(toTarget.x, 0, toTarget.z);
+    if (horizontalDir.length() > 0.0001) {
+        horizontalDir.normalize();
+    }
+
+    const horizontalSpeed = missile.speed * 100; // world units per second
+    const horizontalMove = horizontalDir.scale(horizontalSpeed * deltaTime);
+
+    // Gravity-like acceleration on vertical velocity (downwards)
+    const gravity = -2; // units per second^2
+    missile.verticalVelocity += gravity * deltaTime;
+    const verticalMove = missile.verticalVelocity * deltaTime;
+
+    missile.position.addInPlace(new Vector3(horizontalMove.x, verticalMove, horizontalMove.z));
     missile.mesh.position = missile.position;
 
     if (missile.position.y <= 0) {

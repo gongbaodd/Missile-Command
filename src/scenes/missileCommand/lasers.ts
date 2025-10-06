@@ -110,7 +110,7 @@ export function findNearestAvailableLaser(ctx: SceneContext, position: Vector3):
 
 export function updateLasers(ctx: SceneContext): void {
     const deltaTimeSeconds = ctx.scene.getEngine().getDeltaTime() / 1000;
-    const beamSpeedUnitsPerSecond = 20;
+    const beamSpeedUnitsPerSecond = 40;
 
     for (const laser of ctx.gameState.lasers) {
         if (!laser.isBusy || !laser.target || !laser.beamMesh || !laser.beamDirection || laser.beamTotalLength === undefined) {

@@ -32,6 +32,7 @@ export interface Missile {
 	position: Vector3;
 	target: Vector3;
 	speed: number;
+    verticalVelocity: number;
 	isActive: boolean;
 	isHit: boolean;
 	color: Color4;
