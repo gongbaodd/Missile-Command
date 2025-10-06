@@ -6,6 +6,8 @@ import { getSceneModule } from "./createScene";
 import { AbstractEngine } from "@babylonjs/core/Engines/abstractEngine";
 import { generateRandomHash } from "./utils/roomNumber";
 import "./index.css";
+import { registerPlayer, getCurrentPlayerInfo } from "./scenes/missileCommand/firebase";
+import { PlayerRole } from "./scenes/missileCommand/types";
 
 // Create the renderCanvas element
 const createRenderCanvas = (): HTMLCanvasElement => {
@@ -29,7 +31,7 @@ export const babylonInit = async (container: HTMLElement): Promise<void> => {
     // Create canvas element
     const canvas = createRenderCanvas();
     container.appendChild(canvas);
-    
+
     // Generate the BABYLON 3D engine
     let engine: AbstractEngine;
     if (engineType === "webgpu") {
@@ -87,6 +89,9 @@ function App() {
         console.log("Generated room hash:", roomHash);
         
         try {
+            // Register this client as Defender in Firebase for this room
+            await registerPlayer(PlayerRole.DEFENDER);
+
             const container = document.getElementById("game-container");
             if (container) {
                 await babylonInit(container);

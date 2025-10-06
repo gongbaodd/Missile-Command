@@ -75,4 +75,9 @@ export interface SceneContext {
 	gameState: GameState;
 }
 
+export enum PlayerRole {
+	ATTACKER = 'attacker',
+	DEFENDER = 'defender'
+}
+
 

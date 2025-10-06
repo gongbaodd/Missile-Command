@@ -1,6 +1,8 @@
 import { initializeApp } from "firebase/app";
-import { getDatabase, ref, set, get, onValue } from "firebase/database";
+import { getInstallations, getId as getInstallationId } from "firebase/installations";
+import { getDatabase, ref, set, get, onValue, update } from "firebase/database";
 import type { House, Missile } from "./types";
+import { PlayerRole } from "./types";
 
 const firebaseConfig = {
     apiKey: "AIzaSyBmhyS8vRGw35zxDZOaHkjENFODLi_dhy8",
@@ -54,9 +56,19 @@ export interface SerializedRoomData {
 	timestamp: number;
 }
 
+export interface PlayerInfo {
+    fid: string;
+    role: PlayerRole;
+    lastSeen: number;
+}
+
 // Get room reference using location.hash as key
 function getRoomRef(roomHash: string) {
 	return ref(db, `rooms/${roomHash}`);
+}
+
+function getPlayerRef(roomHash: string, fid: string) {
+    return ref(db, `rooms/${roomHash}/players/${fid}`);
 }
 
 // Serialize houses for Firebase storage
@@ -94,7 +106,8 @@ export async function saveRoomData(houses: House[], missiles: Missile[]): Promis
 			timestamp: Date.now()
 		};
 		
-		await set(roomRef, data);
+        // Only update specific fields so we don't overwrite siblings like 'players'
+        await update(roomRef, data as any);
 	} catch (error) {
 		console.error('Failed to save room data:', error);
 	}
@@ -159,4 +172,38 @@ export function listenToRoomData(callback: (data: SerializedRoomData | null) => 
 	});
 	
 	return unsubscribe;
+}
+
+// Register the current client as a player in the room with role and fid
+export async function registerPlayer(role: PlayerRole): Promise<void> {
+    try {
+        const roomHash = getRoomHash();
+        const installations = getInstallations(app);
+        const fid = await getInstallationId(installations);
+        const playerRef = getPlayerRef(roomHash, fid);
+        await set(playerRef, {
+            role,
+            fid,
+            lastSeen: Date.now()
+        });
+    } catch (error) {
+        console.error("Failed to register player:", error);
+    }
+}
+
+// Fetch the current client's player record from Firebase
+export async function getCurrentPlayerInfo(): Promise<PlayerInfo | null> {
+    try {
+        const roomHash = getRoomHash();
+        const installations = getInstallations(app);
+        const fid = await getInstallationId(installations);
+        const playerRef = getPlayerRef(roomHash, fid);
+        const snapshot = await get(playerRef);
+        if (!snapshot.exists()) return null;
+        const value = snapshot.val() as Omit<PlayerInfo, "fid">;
+        return { fid, ...value };
+    } catch (error) {
+        console.error("Failed to get current player info:", error);
+        return null;
+    }
 }
