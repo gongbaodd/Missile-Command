@@ -6,6 +6,10 @@
     "skipLibCheck": true,
     "useDefineForClassFields": true,
 
+    /* JSX */
+    "jsx": "preserve",
+    "jsxImportSource": "solid-js",
+
     /* modules */
     "module": "ESNext",
     "moduleDetection": "force",

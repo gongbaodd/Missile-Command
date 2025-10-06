@@ -9,4 +9,12 @@ export default defineConfig({
     }),
     pluginSolid(),
   ],
+  html: {
+    template: './src/index.html',
+  },
+  source: {
+    entry: {
+      index: './src/index.tsx',
+    },
+  },
 });
