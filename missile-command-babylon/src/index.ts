@@ -2,13 +2,14 @@ import { Engine } from "@babylonjs/core/Engines/engine";
 import { WebGPUEngine } from "@babylonjs/core/Engines/webgpuEngine";
 import { getSceneModule } from "./createScene";
 import { AbstractEngine } from "@babylonjs/core/Engines/abstractEngine";
+import "./index.css";
 
 // Create the renderCanvas element
 const createRenderCanvas = (): HTMLCanvasElement => {
     const canvas = document.createElement("canvas");
     canvas.id = "renderCanvas";
-    canvas.style.width = "100%";
-    canvas.style.height = "100%";
+    canvas.width = 1024;
+    canvas.height = 768;
     canvas.style.display = "block";
     document.body.appendChild(canvas);
     return canvas;
