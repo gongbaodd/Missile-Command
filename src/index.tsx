@@ -6,7 +6,7 @@ import { getSceneModule } from "./createScene";
 import { AbstractEngine } from "@babylonjs/core/Engines/abstractEngine";
 import { generateRandomHash } from "./utils/roomNumber";
 import "./index.css";
-import { registerPlayer, getCurrentPlayerInfo } from "./scenes/missileCommand/firebase";
+import { registerPlayer, getCurrentPlayerInfo, checkRoomExists, getAllPlayersInRoom } from "./scenes/missileCommand/firebase";
 import { PlayerRole } from "./scenes/missileCommand/types";
 
 // Create the renderCanvas element
@@ -75,6 +75,57 @@ function App() {
     const [isGameOver, setIsGameOver] = createSignal(false);
     const [finalScore, setFinalScore] = createSignal(0);
     const [gameOverReason, setGameOverReason] = createSignal<string | undefined>(undefined);
+    const [playerRole, setPlayerRole] = createSignal<PlayerRole | null>(null);
+    const [showStartGame, setShowStartGame] = createSignal(true);
+    const [isCheckingHash, setIsCheckingHash] = createSignal(true);
+    const [isRoomFull, setIsRoomFull] = createSignal(false);
+
+    const checkHashAndPlayer = async () => {
+        setIsCheckingHash(true);
+        
+        try {
+            const hash = window.location.hash.slice(1);
+            
+            if (hash) {
+                // Check if room exists in Firebase
+                const roomExists = await checkRoomExists(hash);
+                
+                if (roomExists) {
+                    // Get all players in the room
+                    const allPlayers = await getAllPlayersInRoom(hash);
+                    const currentPlayerInfo = await getCurrentPlayerInfo();
+                    
+                    if (currentPlayerInfo) {
+                        // Current user is already in the room
+                        setPlayerRole(currentPlayerInfo.role);
+                        setShowStartGame(false);
+                        setIsRoomFull(false);
+                    } else {
+                        // Current user is not in the room yet
+                        if (allPlayers.length === 0) {
+                            // Room is empty, show start game
+                            setShowStartGame(true);
+                            setIsRoomFull(false);
+                        } else if (allPlayers.length === 1) {
+                            // Room has one player, register as attacker
+                            await registerPlayer(PlayerRole.ATTACKER);
+                            setPlayerRole(PlayerRole.ATTACKER);
+                            setShowStartGame(false);
+                            setIsRoomFull(false);
+                        } else {
+                            // Room has two players, room is full
+                            setShowStartGame(false);
+                            setIsRoomFull(true);
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            console.error("Failed to check hash and player:", error);
+        } finally {
+            setIsCheckingHash(false);
+        }
+    };
 
     const startGame = async () => {
         setIsLoading(true);
@@ -104,6 +155,26 @@ function App() {
         }
     };
 
+    const continueGame = async () => {
+        setIsLoading(true);
+        setGameStarted(true);
+        setIsGameOver(false);
+        setFinalScore(0);
+        setGameOverReason(undefined);
+        
+        try {
+            const container = document.getElementById("game-container");
+            if (container) {
+                await babylonInit(container);
+                console.log("Babylon.js scene initialized successfully");
+            }
+        } catch (error) {
+            console.error("Failed to initialize Babylon.js scene:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const handleGameOver = (e: Event) => {
         const ce = e as CustomEvent<{ score: number; reason?: string }>;
         setFinalScore(ce.detail?.score ?? 0);
@@ -113,6 +184,7 @@ function App() {
 
     onMount(() => {
         window.addEventListener("gameover", handleGameOver as EventListener);
+        checkHashAndPlayer();
     });
 
     onCleanup(() => {
@@ -136,20 +208,53 @@ function App() {
                             Defend your cities from incoming missiles!
                         </p>
                     </div>
-                    <button
-                        class="btn btn-primary btn-lg text-lg px-8 py-4"
-                        onClick={startGame}
-                        disabled={isLoading()}
-                    >
-                        {isLoading() ? (
-                            <>
-                                <span class="loading loading-spinner loading-md"></span>
-                                Loading...
-                            </>
-                        ) : (
-                            "Start Game"
-                        )}
-                    </button>
+                    {isCheckingHash() ? (
+                        <div class="flex items-center justify-center space-x-2">
+                            <span class="loading loading-spinner loading-md"></span>
+                            <span class="text-gray-300">Checking room...</span>
+                        </div>
+                    ) : isRoomFull() ? (
+                        <div class="text-center space-y-4">
+                            <div class="text-xl text-yellow-400 font-semibold">
+                                Room is Full
+                            </div>
+                            <p class="text-gray-300 opacity-75">
+                                This room already has 2 players. Please try another room or create a new one.
+                            </p>
+                        </div>
+                    ) : showStartGame() ? (
+                        <button
+                            class="btn btn-primary btn-lg text-lg px-8 py-4"
+                            onClick={startGame}
+                            disabled={isLoading()}
+                        >
+                            {isLoading() ? (
+                                <>
+                                    <span class="loading loading-spinner loading-md"></span>
+                                    Loading...
+                                </>
+                            ) : (
+                                "Start Game"
+                            )}
+                        </button>
+                    ) : (
+                        <button
+                            class="btn btn-secondary btn-lg text-lg px-8 py-4"
+                            onClick={continueGame}
+                            disabled={isLoading()}
+                        >
+                            {isLoading() ? (
+                                <>
+                                    <span class="loading loading-spinner loading-md"></span>
+                                    Loading...
+                                </>
+                            ) : playerRole() === PlayerRole.DEFENDER ? (
+                                "Continue Defending"
+                            ) : (
+                                "Continue Attacking"
+                            )}
+                        </button>
+                    )}
                 </div>
             ) : (
                 <div class="relative w-full h-full flex items-center justify-center">

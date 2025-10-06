@@ -207,3 +207,23 @@ export async function getCurrentPlayerInfo(): Promise<PlayerInfo | null> {
         return null;
     }
 }
+
+// Get all players in a room
+export async function getAllPlayersInRoom(roomHash?: string): Promise<PlayerInfo[]> {
+    try {
+        const hash = roomHash || getRoomHash();
+        const playersRef = ref(db, `rooms/${hash}/players`);
+        const snapshot = await get(playersRef);
+        if (!snapshot.exists()) return [];
+        
+        const playersData = snapshot.val();
+        return Object.entries(playersData).map(([fid, playerData]: [string, any]) => ({
+            fid,
+            role: playerData.role,
+            lastSeen: playerData.lastSeen
+        }));
+    } catch (error) {
+        console.error("Failed to get all players in room:", error);
+        return [];
+    }
+}
