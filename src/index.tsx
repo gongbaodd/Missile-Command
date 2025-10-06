@@ -223,37 +223,47 @@ function App() {
                             </p>
                         </div>
                     ) : showStartGame() ? (
-                        <button
-                            class="btn btn-primary btn-lg text-lg px-8 py-4"
-                            onClick={startGame}
-                            disabled={isLoading()}
-                        >
-                            {isLoading() ? (
-                                <>
-                                    <span class="loading loading-spinner loading-md"></span>
-                                    Loading...
-                                </>
-                            ) : (
-                                "Start Game"
-                            )}
-                        </button>
+                        <div class="space-y-6">
+                            <img src={"/defender_instruction.png"} alt="Defender instructions" class="mx-auto max-h-[50vh] rounded shadow-xl" />
+                            <button
+                                class="btn btn-primary btn-lg text-lg px-8 py-4"
+                                onClick={startGame}
+                                disabled={isLoading()}
+                            >
+                                {isLoading() ? (
+                                    <>
+                                        <span class="loading loading-spinner loading-md"></span>
+                                        Loading...
+                                    </>
+                                ) : (
+                                    "Start Game"
+                                )}
+                            </button>
+                        </div>
                     ) : (
-                        <button
-                            class="btn btn-secondary btn-lg text-lg px-8 py-4"
-                            onClick={continueGame}
-                            disabled={isLoading()}
-                        >
-                            {isLoading() ? (
-                                <>
-                                    <span class="loading loading-spinner loading-md"></span>
-                                    Loading...
-                                </>
-                            ) : playerRole() === PlayerRole.DEFENDER ? (
-                                "Continue Defending"
+                        <div class="space-y-6">
+                            {playerRole() === PlayerRole.DEFENDER ? (
+                                <img src={"/defender_instruction.png"} alt="Defender instructions" class="mx-auto max-h-[50vh] rounded shadow-xl" />
                             ) : (
-                                "Continue Attacking"
+                                <img src={"/attack_instruction.png"} alt="Attacker instructions" class="mx-auto max-h-[50vh] rounded shadow-xl" />
                             )}
-                        </button>
+                            <button
+                                class="btn btn-secondary btn-lg text-lg px-8 py-4"
+                                onClick={continueGame}
+                                disabled={isLoading()}
+                            >
+                                {isLoading() ? (
+                                    <>
+                                        <span class="loading loading-spinner loading-md"></span>
+                                        Loading...
+                                    </>
+                                ) : playerRole() === PlayerRole.DEFENDER ? (
+                                    "Continue Defending"
+                                ) : (
+                                    "Continue Attacking"
+                                )}
+                            </button>
+                        </div>
                     )}
                 </div>
             ) : (
