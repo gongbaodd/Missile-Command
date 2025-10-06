@@ -23,6 +23,9 @@
     "@babylonjs/inspector": "^8.29.0",
     "@babylonjs/loaders": "^8.29.0",
     "@babylonjs/materials": "^8.29.0",
-    "recast-detour": "^1.6.4"
+    "@rsbuild/plugin-babel": "^1.0.6",
+    "@rsbuild/plugin-solid": "^1.0.6",
+    "recast-detour": "^1.6.4",
+    "solid-js": "^1.9.9"
   }
 }
