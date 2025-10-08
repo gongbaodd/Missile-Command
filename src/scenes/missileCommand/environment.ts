@@ -4,6 +4,7 @@ import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { COLORS, type House, type SceneContext } from "./types";
+import { AABB as YukaAABB, Vector3 as YukaVector3 } from "yuka";
 import { loadRoomData, saveRoomData, type SerializedHouse } from "./firebase";
 
 export function createGround(ctx: SceneContext): Mesh {
@@ -157,30 +158,42 @@ function createSingleHouse(ctx: SceneContext, groundRadius: number): House | nul
 }
 
 function isValidHousePosition(ctx: SceneContext, position: Vector3, size: Vector3): boolean {
+    // Keep ground boundary constraint (circular ground with radius 30)
     const distanceFromCenter = Math.sqrt(position.x * position.x + position.z * position.z);
     if (distanceFromCenter + Math.max(size.x, size.z) / 2 > 30) {
         return false;
     }
 
-    for (const house of ctx.gameState.houses) {
-        const dx = Math.abs(position.x - house.position.x);
-        const dz = Math.abs(position.z - house.position.z);
+    // Build Yuka AABB for the proposed house
+    const proposedCenter = new YukaVector3(position.x, position.y + size.y / 2, position.z);
+    const proposedHalf = new YukaVector3(size.x / 2, size.y / 2, size.z / 2);
+    const proposedMin = proposedCenter.clone().sub(proposedHalf);
+    const proposedMax = proposedCenter.clone().add(proposedHalf);
+    const proposedAABB = new YukaAABB().set(proposedMin, proposedMax);
 
-        if (dx < (size.x + house.size.x) / 2 && dz < (size.z + house.size.z) / 2) {
+    // Test intersection with existing houses (box vs box)
+    for (const house of ctx.gameState.houses) {
+        const existingCenter = new YukaVector3(house.position.x, house.position.y + house.size.y / 2, house.position.z);
+        const existingHalf = new YukaVector3(house.size.x / 2, house.size.y / 2, house.size.z / 2);
+        const existingMin = existingCenter.clone().sub(existingHalf);
+        const existingMax = existingCenter.clone().add(existingHalf);
+        const existingAABB = new YukaAABB().set(existingMin, existingMax);
+
+        if (proposedAABB.intersectsAABB(existingAABB)) {
             return false;
         }
     }
 
-    // Avoid placing houses too close to laser systems
-    // Laser base has diameter ~6 (radius ~3). Keep a small safety margin.
-    const houseRadius = Math.max(size.x, size.z) / 2;
-    const laserSafetyRadius = 4; // base radius (3) + 1 unit margin
-
+    // Avoid placing houses too close to laser systems by approximating lasers with AABBs
+    // Laser base ~ radius 3, total height ~ 7.6; add small safety margin
+    const laserHalfExtents = new YukaVector3(3, 4, 3);
     for (const laser of ctx.gameState.lasers) {
-        const dx = position.x - laser.position.x;
-        const dz = position.z - laser.position.z;
-        const distanceXZ = Math.sqrt(dx * dx + dz * dz);
-        if (distanceXZ < houseRadius + laserSafetyRadius) {
+        const laserCenter = new YukaVector3(laser.position.x, 3.5, laser.position.z);
+        const laserMin = laserCenter.clone().sub(laserHalfExtents);
+        const laserMax = laserCenter.clone().add(laserHalfExtents);
+        const laserAABB = new YukaAABB().set(laserMin, laserMax);
+
+        if (proposedAABB.intersectsAABB(laserAABB)) {
             return false;
         }
     }
