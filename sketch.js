@@ -328,10 +328,6 @@ class Houses {
 
       return h
     }).filter(h => !!h.pos)
-
-    // TODO: remove this
-    window.__HOUSES__ = this.houses
-    window.__onHouseReady__()
   }
 
   isValidPlacement(pos, size, houses) {
@@ -465,10 +461,6 @@ class Missiles {
 
       timeout && clearTimeout(timeout)
       timeout = setTimeout(missileInterval, interval)
-
-      // TODO: remove this 
-      window.__MISSILE___ = this.missiles;
-      window.__onMissileUpdate__();
     }
 
     missileInterval()
