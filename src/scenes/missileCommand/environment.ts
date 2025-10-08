@@ -4,7 +4,7 @@ import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { COLORS, type House, type SceneContext } from "./types";
-import { AABB as YukaAABB, Vector3 as YukaVector3 } from "yuka";
+import { Vector3 as YukaVector3, AABB as YukaAABB } from "yuka";
 import { loadRoomData, saveRoomData, type SerializedHouse } from "./firebase";
 
 export function createGround(ctx: SceneContext): Mesh {
@@ -164,21 +164,11 @@ function isValidHousePosition(ctx: SceneContext, position: Vector3, size: Vector
         return false;
     }
 
-    // Build Yuka AABB for the proposed house
-    const proposedCenter = new YukaVector3(position.x, position.y + size.y / 2, position.z);
-    const proposedHalf = new YukaVector3(size.x / 2, size.y / 2, size.z / 2);
-    const proposedMin = proposedCenter.clone().sub(proposedHalf);
-    const proposedMax = proposedCenter.clone().add(proposedHalf);
-    const proposedAABB = new YukaAABB().set(proposedMin, proposedMax);
+    const proposedAABB = getHouseAABB(position, size)
 
     // Test intersection with existing houses (box vs box)
     for (const house of ctx.gameState.houses) {
-        const existingCenter = new YukaVector3(house.position.x, house.position.y + house.size.y / 2, house.position.z);
-        const existingHalf = new YukaVector3(house.size.x / 2, house.size.y / 2, house.size.z / 2);
-        const existingMin = existingCenter.clone().sub(existingHalf);
-        const existingMax = existingCenter.clone().add(existingHalf);
-        const existingAABB = new YukaAABB().set(existingMin, existingMax);
-
+        const existingAABB = getHouseAABB(house.position, house.size)
         if (proposedAABB.intersectsAABB(existingAABB)) {
             return false;
         }
@@ -201,4 +191,17 @@ function isValidHousePosition(ctx: SceneContext, position: Vector3, size: Vector
     return true;
 }
 
+function getHouseAABB(position: Vector3, size: Vector3): YukaAABB {
+    const points = []
+    // push the 8 corners of the house
+    points.push(new YukaVector3(position.x + size.x / 2, position.y + size.y / 2, position.z + size.z / 2));
+    points.push(new YukaVector3(position.x + size.x / 2, position.y + size.y / 2, position.z - size.z / 2));
+    points.push(new YukaVector3(position.x + size.x / 2, position.y - size.y / 2, position.z + size.z / 2));
+    points.push(new YukaVector3(position.x + size.x / 2, position.y - size.y / 2, position.z - size.z / 2));
+    points.push(new YukaVector3(position.x - size.x / 2, position.y + size.y / 2, position.z + size.z / 2));
+    points.push(new YukaVector3(position.x - size.x / 2, position.y + size.y / 2, position.z - size.z / 2));
+    points.push(new YukaVector3(position.x - size.x / 2, position.y - size.y / 2, position.z + size.z / 2));
+    points.push(new YukaVector3(position.x - size.x / 2, position.y - size.y / 2, position.z - size.z / 2));
 
+    return new YukaAABB().fromPoints(points);
+}
