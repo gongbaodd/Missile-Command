@@ -1,13 +1,17 @@
 {
   "name": "Missile-Command",
   "version": "1.0.0",
+  "private": true,
   "description": "",
-  "main": "index.js",
+  "packageManager": "pnpm@10.15.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "packageManager": "pnpm@10.15.0"
+    "dev": "pnpm -r --parallel dev",
+    "dev:client": "pnpm --filter ./apps/client dev",
+    "dev:server": "pnpm --filter ./apps/server dev",
+    "build": "pnpm -r build"
+  }
 }
