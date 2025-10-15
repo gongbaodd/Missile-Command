@@ -1,34 +1,13 @@
 {
-  "name": "missile-command-babylon",
+  "name": "Missile-Command",
   "version": "1.0.0",
-  "private": true,
-  "type": "module",
+  "description": "",
+  "main": "index.js",
   "scripts": {
-    "build": "rsbuild build",
-    "check": "biome check --write",
-    "dev": "rsbuild dev --open",
-    "format": "biome format --write",
-    "preview": "rsbuild preview"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "devDependencies": {
-    "@biomejs/biome": "2.2.3",
-    "@rsbuild/core": "^1.5.6",
-    "@tailwindcss/postcss": "^4.1.14",
-    "daisyui": "^5.1.27",
-    "tailwindcss": "^4.1.14",
-    "typescript": "^5.9.2"
-  },
-  "dependencies": {
-    "@babylonjs/core": "^8.29.0",
-    "@babylonjs/inspector": "^8.29.0",
-    "@babylonjs/loaders": "^8.29.0",
-    "@babylonjs/materials": "^8.29.0",
-    "@rsbuild/plugin-babel": "^1.0.6",
-    "@rsbuild/plugin-solid": "^1.0.6",
-    "@types/yuka": "^0.7.4",
-    "firebase": "^12.3.0",
-    "recast-detour": "^1.6.4",
-    "solid-js": "^1.9.9",
-    "yuka": "^0.7.8"
-  }
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.15.0"
 }
