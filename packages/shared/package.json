@@ -1,0 +1,25 @@
+{
+    "name": "@mc/shared",
+    "version": "0.0.1",
+    "type": "module",
+    "main": "dist/index.cjs",
+    "module": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js",
+        "require": "./dist/index.cjs"
+      }
+    },
+    "scripts": {
+      "build": "tsc -p tsconfig.build.json && tsup src/index.ts --format cjs,esm --dts"
+    },
+    "devDependencies": {
+      "tsup": "^8.0.0",
+      "typescript": "^5.6.0"
+    },
+    "dependencies": {
+      "@colyseus/schema": "^2.0.0"
+    }
+  }
