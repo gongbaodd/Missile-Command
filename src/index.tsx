@@ -80,7 +80,6 @@ function App() {
     const [playerRole, setPlayerRole] = createSignal<PlayerRole | null>(null);
     const [showStartGame, setShowStartGame] = createSignal(true);
     const [isCheckingHash, setIsCheckingHash] = createSignal(true);
-    const [isRoomFull, setIsRoomFull] = createSignal(false);
 
     const checkHashAndPlayer = async () => {
         setIsCheckingHash(true);
@@ -101,23 +100,19 @@ function App() {
                         // Current user is already in the room
                         setPlayerRole(currentPlayerInfo.role);
                         setShowStartGame(false);
-                        setIsRoomFull(false);
                     } else {
                         // Current user is not in the room yet
                         if (allPlayers.length === 0) {
                             // Room is empty, show start game
                             setShowStartGame(true);
-                            setIsRoomFull(false);
                         } else if (allPlayers.length === 1) {
                             // Room has one player, register as attacker
                             await registerPlayer(PlayerRole.ATTACKER);
                             setPlayerRole(PlayerRole.ATTACKER);
                             setShowStartGame(false);
-                            setIsRoomFull(false);
                         } else {
-                            // Room has two players, room is full
+                            // Room has two players, show role selection
                             setShowStartGame(false);
-                            setIsRoomFull(true);
                         }
                     }
                 }
@@ -177,6 +172,32 @@ function App() {
         }
     };
 
+    const selectRole = async (role: PlayerRole) => {
+        setIsLoading(true);
+        
+        try {
+            // Register the player with the selected role
+            await registerPlayer(role);
+            setPlayerRole(role);
+            
+            // Start the game with the selected role
+            setGameStarted(true);
+            setIsGameOver(false);
+            setFinalScore(0);
+            setGameOverReason(undefined);
+            
+            const container = document.getElementById("game-container");
+            if (container) {
+                await babylonInit(container, role);
+                console.log("Babylon.js scene initialized successfully");
+            }
+        } catch (error) {
+            console.error("Failed to select role and initialize game:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const handleGameOver = (e: Event) => {
         const ce = e as CustomEvent<{ score: number; reason?: string }>;
         setFinalScore(ce.detail?.score ?? 0);
@@ -215,14 +236,50 @@ function App() {
                             <span class="loading loading-spinner loading-md"></span>
                             <span class="text-gray-300">Checking room...</span>
                         </div>
-                    ) : isRoomFull() ? (
-                        <div class="text-center space-y-4">
+                    ) : !showStartGame() && !playerRole() ? (
+                        <div class="text-center space-y-6">
                             <div class="text-xl text-yellow-400 font-semibold">
-                                Room is Full
+                                Choose Your Role
                             </div>
                             <p class="text-gray-300 opacity-75">
-                                This room already has 2 players. Please try another room or create a new one.
+                                This room already has players. Choose which role you want to play:
                             </p>
+                            <div class="flex gap-4 justify-center">
+                                <div class="space-y-4">
+                                    <img src={"/defender_instruction.png"} alt="Defender instructions" class="mx-auto max-h-[30vh] rounded shadow-xl" />
+                                    <button
+                                        class="btn btn-primary btn-lg text-lg px-8 py-4"
+                                        onClick={() => selectRole(PlayerRole.DEFENDER)}
+                                        disabled={isLoading()}
+                                    >
+                                        {isLoading() ? (
+                                            <>
+                                                <span class="loading loading-spinner loading-md"></span>
+                                                Loading...
+                                            </>
+                                        ) : (
+                                            "Play as Defender"
+                                        )}
+                                    </button>
+                                </div>
+                                <div class="space-y-4">
+                                    <img src={"/attack_instruction.png"} alt="Attacker instructions" class="mx-auto max-h-[30vh] rounded shadow-xl" />
+                                    <button
+                                        class="btn btn-secondary btn-lg text-lg px-8 py-4"
+                                        onClick={() => selectRole(PlayerRole.ATTACKER)}
+                                        disabled={isLoading()}
+                                    >
+                                        {isLoading() ? (
+                                            <>
+                                                <span class="loading loading-spinner loading-md"></span>
+                                                Loading...
+                                            </>
+                                        ) : (
+                                            "Play as Attacker"
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     ) : showStartGame() ? (
                         <div class="space-y-6">
