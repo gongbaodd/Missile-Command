@@ -7,8 +7,12 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "colyseus": "^0.15.20",
+    "@colyseus/monitor": "^0.16.7",
+    "@colyseus/playground": "^0.16.4",
     "@colyseus/schema": "^2.0.0",
+    "@colyseus/tools": "^0.16.14",
+    "@types/express": "^5.0.4",
+    "colyseus": "^0.16.0",
     "express": "^4.19.2"
   },
   "devDependencies": {

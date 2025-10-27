@@ -1,18 +1,17 @@
-import express from "express";
-import { createServer } from "http";
-import { Server } from "colyseus";
-import { GameRoom } from "./rooms/GameRoom";
+/**
+ * IMPORTANT:
+ * ---------
+ * Do not manually edit this file if you'd like to host your server on Colyseus Cloud
+ *
+ * If you're self-hosting (without Colyseus Cloud), you can manually
+ * instantiate a Colyseus Server as documented here:
+ *
+ * See: https://docs.colyseus.io/server/api/#constructor-options
+ */
+import { listen } from "@colyseus/tools";
 
-const port = Number(process.env.PORT || 2567);
+// Import arena config
+import appConfig from "./app.config";
 
-const app = express();
-const httpServer = createServer(app);
-const gameServer = new Server({ server: httpServer });
-
-gameServer.define("game", GameRoom);
-
-app.get("/health", (_req, res) => res.send("ok"));
-
-httpServer.listen(port, () => {
-	console.log(`Colyseus listening on :${port}`);
-});
+// Create and listen on 2567 (or PORT environment variable.)
+listen(appConfig);
