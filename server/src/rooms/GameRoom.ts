@@ -2,6 +2,8 @@ import { Room, Client } from "colyseus";
 import { Schema, type, ArraySchema } from "@colyseus/schema";
 import { generateUsername } from "unique-username-generator";
 import { PlayerRole } from "../types";
+import { MissileCommandScene } from "../scenes/missileCommandScene";
+import { NullEngine, SceneSerializer } from "@babylonjs/core";
 
 
 class Player extends Schema {
@@ -64,11 +66,16 @@ class GameState extends Schema {
     @type([Marker]) markers: ArraySchema<Marker> = new ArraySchema<Marker>();
     @type("boolean") isGameOver: boolean = false;
     @type("number") score: number = 0;
+    @type("string") serializedScene = "";
 }
 
 export class GameRoom extends Room<GameState> {
     state = new GameState();
+    scene = new MissileCommandScene();
     onCreate() {
+        const engine = new NullEngine();
+
+        this.state.serializedScene = SceneSerializer.Serialize(this.scene.createScene(engine))
 
         this.onMessage("message", (client, message) => {
             console.log("ChatRoom received message from", client.sessionId, ":", message);
