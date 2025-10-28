@@ -219,7 +219,7 @@ function App() {
             {!gameStarted() ? (
                 <div class="text-center space-y-8">
                     <div class="max-w-2xl mx-auto">
-                        <PlayersTables players={players()} />
+                        <PlayersTables players={players()} currentName={playerName() || undefined} />
                     </div>
                     <div class="space-y-4">
                         <h1 class="text-6xl font-bold text-white mb-4">
@@ -331,7 +331,7 @@ function App() {
                         </div>
                     </Show>
                     <div class="absolute top-3 right-3 max-w-sm">
-                        <PlayersTables players={players()} small />
+                        <PlayersTables players={players()} small currentName={playerName() || undefined} />
                     </div>
                     <div id="game-container" class="w-full h-full flex items-center justify-center" />
                     <Show when={isGameOver()}>
@@ -356,7 +356,7 @@ function App() {
     );
 }
 
-function PlayersTables(props: { players: RoomPlayer[]; small?: boolean }) {
+function PlayersTables(props: { players: RoomPlayer[]; small?: boolean; currentName?: string }) {
     const defenders = () => props.players.filter(p => p.role === PlayerRole.DEFENDER);
     const attackers = () => props.players.filter(p => p.role === PlayerRole.ATTACKER);
     const tableCls = props.small ? "table table-xs" : "table table-sm";
@@ -373,8 +373,8 @@ function PlayersTables(props: { players: RoomPlayer[]; small?: boolean }) {
                         <tbody>
                             <For each={defenders()}>{(p) => (
                                 <tr>
-                                    <td class="pr-4 truncate max-w-[12rem]">{p.name || p.id}</td>
-                                    <td class="text-right">{p.score}</td>
+                                    <td class={"pr-4 truncate max-w-[12rem]" + ((props.currentName && (p.name || p.id) === props.currentName) ? " font-bold" : "")}>{p.name || p.id}</td>
+                                    <td class={"text-right" + ((props.currentName && (p.name || p.id) === props.currentName) ? " font-bold" : "")}>{p.score}</td>
                                 </tr>
                             )}</For>
                             <Show when={defenders().length === 0}>
@@ -392,8 +392,8 @@ function PlayersTables(props: { players: RoomPlayer[]; small?: boolean }) {
                         <tbody>
                             <For each={attackers()}>{(p) => (
                                 <tr>
-                                    <td class="pr-4 truncate max-w-[12rem]">{p.name || p.id}</td>
-                                    <td class="text-right">{p.score}</td>
+                                    <td class={"pr-4 truncate max-w-[12rem]" + ((props.currentName && (p.name || p.id) === props.currentName) ? " font-bold" : "")}>{p.name || p.id}</td>
+                                    <td class={"text-right" + ((props.currentName && (p.name || p.id) === props.currentName) ? " font-bold" : "")}>{p.score}</td>
                                 </tr>
                             )}</For>
                             <Show when={attackers().length === 0}>
