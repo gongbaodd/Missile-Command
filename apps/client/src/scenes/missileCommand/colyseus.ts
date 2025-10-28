@@ -49,7 +49,7 @@ export interface SerializedColor4 {
     r: number;
     g: number;
     b: number;
-    a: number;
+    a?: number;
 }
 
 export interface SerializedHouse {
@@ -57,6 +57,7 @@ export interface SerializedHouse {
     size: SerializedVector3;
     color: SerializedColor4;
     isDestroyed: boolean;
+    isHit?: boolean;
 }
 
 export interface SerializedMissile {
@@ -121,22 +122,46 @@ export async function saveRoomData(houses: House[], missiles: Missile[]): Promis
 export async function loadRoomData(): Promise<SerializedRoomData | null> {
     try {
         const room = await getRoom();
-        return await new Promise<SerializedRoomData | null>((resolve) => {
-            let resolved = false;
-            const handler = (payload: SerializedRoomData) => {
-                if (resolved) return;
-                resolved = true;
-                resolve(payload ?? null);
+        // Helper to take a snapshot from current room.state (works with onCreated server init)
+        const snapshotFromState = (): SerializedRoomData | null => {
+            const state: any = (room as any).state;
+            if (!state) return null;
+            const mapLikeToArray = (m: any): any[] => {
+                if (!m) return [];
+                if (Array.isArray(m)) return m;
+                if (typeof m.forEach === "function" && !Array.isArray(m)) {
+                    const arr: any[] = [];
+                    m.forEach((v: any) => arr.push(v));
+                    return arr;
+                }
+                return Object.values(m);
             };
-            room.onMessage("roomData", handler);
-            room.send("loadRoomData");
-            // soft timeout safeguard
-            setTimeout(() => {
-                if (resolved) return;
-                resolved = true;
-                resolve(null);
-            }, 2000);
-        });
+
+            const housesRaw = mapLikeToArray(state.houses);
+            const missilesRaw = mapLikeToArray(state.missiles);
+            if (!housesRaw.length && !missilesRaw.length) return null;
+
+            const houses: SerializedHouse[] = housesRaw.map((h: any) => ({
+                position: { x: h.position?.x ?? 0, y: h.position?.y ?? 0, z: h.position?.z ?? 0 },
+                size: { x: h.size?.x ?? 4, y: h.size?.y ?? 10, z: h.size?.z ?? 4 },
+                color: { r: h.color?.r ?? 1, g: h.color?.g ?? 1, b: h.color?.b ?? 1, a: h.color?.a },
+                isDestroyed: !!h.isDestroyed,
+                isHit: !!h.isHit,
+            }));
+            const missiles: SerializedMissile[] = missilesRaw.map((m: any) => ({
+                id: m.id,
+                position: { x: m.position?.x ?? 0, y: m.position?.y ?? 0, z: m.position?.z ?? 0 },
+                target: { x: m.target?.x ?? 0, y: m.target?.y ?? 0, z: m.target?.z ?? 0 },
+                speed: typeof m.speed === "number" ? m.speed : 1,
+                verticalVelocity: typeof m.verticalVelocity === "number" ? m.verticalVelocity : 0,
+                isActive: !!m.isActive,
+                isHit: !!m.isHit,
+                color: { r: m.color?.r ?? 1, g: m.color?.g ?? 1, b: m.color?.b ?? 1, a: m.color?.a },
+            }));
+            return { houses, missiles, timestamp: Date.now() };
+        };
+
+        return snapshotFromState();
     } catch (error) {
         console.error("Failed to load room data via Colyseus:", error);
         return null;
@@ -157,10 +182,54 @@ export function listenToRoomData(callback: (data: SerializedRoomData | null) => 
     let disposed = false;
     getRoom().then((room) => {
         if (disposed) return;
-        const handler = (payload: SerializedRoomData) => callback(payload ?? null);
-        room.onMessage("roomData", handler);
-        // Ask server to start streaming updates
+
+        const emitSnapshotFromState = () => {
+            const state: any = (room as any).state;
+            if (!state) return;
+            const mapLikeToArray = (m: any): any[] => {
+                if (!m) return [];
+                if (Array.isArray(m)) return m;
+                if (typeof m.forEach === "function" && !Array.isArray(m)) {
+                    const arr: any[] = [];
+                    m.forEach((v: any) => arr.push(v));
+                    return arr;
+                }
+                return Object.values(m);
+            };
+            const housesRaw = mapLikeToArray(state.houses);
+            const missilesRaw = mapLikeToArray(state.missiles);
+            const data: SerializedRoomData = {
+                houses: housesRaw.map((h: any) => ({
+                    position: { x: h.position?.x ?? 0, y: h.position?.y ?? 0, z: h.position?.z ?? 0 },
+                    size: { x: h.size?.x ?? 4, y: h.size?.y ?? 10, z: h.size?.z ?? 4 },
+                    color: { r: h.color?.r ?? 1, g: h.color?.g ?? 1, b: h.color?.b ?? 1, a: h.color?.a },
+                    isDestroyed: !!h.isDestroyed,
+                    isHit: !!h.isHit,
+                })),
+                missiles: missilesRaw.map((m: any) => ({
+                    id: m.id,
+                    position: { x: m.position?.x ?? 0, y: m.position?.y ?? 0, z: m.position?.z ?? 0 },
+                    target: { x: m.target?.x ?? 0, y: m.target?.y ?? 0, z: m.target?.z ?? 0 },
+                    speed: typeof m.speed === "number" ? m.speed : 1,
+                    verticalVelocity: typeof m.verticalVelocity === "number" ? m.verticalVelocity : 0,
+                    isActive: !!m.isActive,
+                    isHit: !!m.isHit,
+                    color: { r: m.color?.r ?? 1, g: m.color?.g ?? 1, b: m.color?.b ?? 1, a: m.color?.a },
+                })),
+                timestamp: Date.now(),
+            };
+            callback(data);
+        };
+
+        const msgHandler = (payload: SerializedRoomData) => callback(payload ?? null);
+        room.onMessage("roomData", msgHandler);
         room.send("subscribeRoomData");
+
+        // Also mirror server state changes (covers onCreated snapshots when no custom message is sent)
+        const stateHandler = (_s: any) => emitSnapshotFromState();
+        room.onStateChange(stateHandler);
+        // Emit an initial snapshot immediately
+        emitSnapshotFromState();
     }).catch((_e) => { /* ignore */ });
     return () => {
         disposed = true;
