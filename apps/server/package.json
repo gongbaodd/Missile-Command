@@ -30,6 +30,7 @@
     "colyseus": "^0.16.0",
     "cors": "^2.8.5",
     "express": "^4.16.4",
-    "serve-index": "^1.8.0"
+    "serve-index": "^1.8.0",
+    "unique-username-generator": "^1.5.1"
   }
 }
