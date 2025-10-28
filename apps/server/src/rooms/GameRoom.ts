@@ -64,13 +64,11 @@ class GameState extends Schema {
     @type([Marker]) markers: ArraySchema<Marker> = new ArraySchema<Marker>();
     @type("boolean") isGameOver: boolean = false;
     @type("number") score: number = 0;
-    @type("string") hash: string = "";
 }
 
 export class GameRoom extends Room<GameState> {
     state = new GameState();
-    onCreate(options: { hash: string }) {
-        this.state.hash = options.hash;
+    onCreate() {
 
         this.onMessage("message", (client, message) => {
             console.log("ChatRoom received message from", client.sessionId, ":", message);
@@ -106,14 +104,16 @@ export class GameRoom extends Room<GameState> {
         player.role = options.role ?? PlayerRole.DEFENDER;
         this.state.players.push(player);
 
-        this.broadcast("messages", `${ client.sessionId } joined.`);
+        this.broadcast("messages", `${ client.sessionId }, name: ${ player.name }, role: ${ player.role } joined.`);
     }
 
     onLeave(client: Client) {
+        const player = this.findPlayer(client.sessionId);
+        if (!player) return;
         const idx = this.state.players.findIndex(p => p.id === client.sessionId);
         if (idx >= 0) this.state.players.splice(idx, 1);
 
-        this.broadcast("messages", `${ client.sessionId } left.`);
+        this.broadcast("messages", `${ client.sessionId }, name: ${ player.name }, role: ${ player.role } left.`);
     }
 
 	onDispose() {
