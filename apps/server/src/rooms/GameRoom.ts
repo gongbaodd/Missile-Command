@@ -1,17 +1,14 @@
 import { Room, Client } from "colyseus";
 import { Schema, type } from "@colyseus/schema";
 import { generateUsername } from "unique-username-generator";
+import { PlayerRole } from "../types";
 
-enum PlayerRole {
-	ATTACKER = 'attacker',
-	DEFENDER = 'defender'
-}
 
 class Player extends Schema {
 	@type("string") id: string = "";
 	@type("string") name: string = "";
 	@type("number") score: number = 0;
-	@type("string") role: PlayerRole = PlayerRole.DEFENDER;
+	@type("string") role: PlayerRole;
 }
 
 interface IOnJoinOptions {

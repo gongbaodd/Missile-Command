@@ -8,6 +8,15 @@ importers:
 
   .:
     dependencies:
+      '@babylonjs/core':
+        specifier: ^8.33.4
+        version: 8.33.4
+      '@babylonjs/loaders':
+        specifier: ^8.33.4
+        version: 8.33.4(@babylonjs/core@8.33.4)(babylonjs-gltf2interface@8.33.4)
+      '@babylonjs/serializers':
+        specifier: ^8.33.4
+        version: 8.33.4(@babylonjs/core@8.33.4)(babylonjs-gltf2interface@8.33.4)
       '@colyseus/auth':
         specifier: ^0.16.0
         version: 0.16.6(@colyseus/core@0.16.22(@colyseus/schema@3.0.65)(@pm2/io@6.1.0))(express@4.21.2)
@@ -59,6 +68,21 @@ importers:
         version: 4.9.5
 
 packages:
+
+  '@babylonjs/core@8.33.4':
+    resolution: {integrity: sha512-kXNFHRpjZkq61Ddr6FR7ScVMx6NCeorOqu6wTmQnTCndCTqNTJcS6p+OHloM9BVUNXvpJFNbKN+cHPPHGOc4Pg==}
+
+  '@babylonjs/loaders@8.33.4':
+    resolution: {integrity: sha512-OmnvQWFPh+/qrJQxOhpFn8F6w52eFFf+Ond8ZS4rnWyFty5YWWy303vQfgBPOUguRcKdj0HZuKGLWsBXK4V3Ng==}
+    peerDependencies:
+      '@babylonjs/core': ^8.0.0
+      babylonjs-gltf2interface: ^8.0.0
+
+  '@babylonjs/serializers@8.33.4':
+    resolution: {integrity: sha512-6LPUGkfMyTgVMpXDOImXKTxaiMnwzissTYujsAyJk9WaSLPr8Z0qMLcwRO/3BD+xRo4RBoj1QXBeowForbQ9vQ==}
+    peerDependencies:
+      '@babylonjs/core': ^8.0.0
+      babylonjs-gltf2interface: ^8.0.0
 
   '@colyseus/auth@0.16.6':
     resolution: {integrity: sha512-gfxnTOhfmd1O2OnCOw2S8hFyGNWib2MJzD3EIU0Q43eby2VXoKtGpE3llu2cqgmgJ1ShV79jk2RnPt5LEo89hw==}
@@ -352,6 +376,9 @@ packages:
 
   async@2.6.4:
     resolution: {integrity: sha512-mzo5dfJYwAn29PeiJ0zvwTo04zj8HDJj0Mn8TD7sno7q12prdbnasKJHhkm2c1LgrhlJ0teaea8860oxi51mGA==}
+
+  babylonjs-gltf2interface@8.33.4:
+    resolution: {integrity: sha512-Nqc54fsBznPBhOKuzjmP/I6gohwutJ0OkCN81tZEwf+kw0Y2MbwdiweTuq24ok3WDUPCKpkOmgraZKJkY74H9g==}
 
   batch@0.6.1:
     resolution: {integrity: sha512-x+VAiMRL6UPkx+kudNvxTl6hB2XNNCG2r+7wixVfIYwu/2HKRXimwQyaumLjMveWvT2Hkd/cAJw+QBMfJ/EKVw==}
@@ -984,6 +1011,18 @@ packages:
 
 snapshots:
 
+  '@babylonjs/core@8.33.4': {}
+
+  '@babylonjs/loaders@8.33.4(@babylonjs/core@8.33.4)(babylonjs-gltf2interface@8.33.4)':
+    dependencies:
+      '@babylonjs/core': 8.33.4
+      babylonjs-gltf2interface: 8.33.4
+
+  '@babylonjs/serializers@8.33.4(@babylonjs/core@8.33.4)(babylonjs-gltf2interface@8.33.4)':
+    dependencies:
+      '@babylonjs/core': 8.33.4
+      babylonjs-gltf2interface: 8.33.4
+
   '@colyseus/auth@0.16.6(@colyseus/core@0.16.22(@colyseus/schema@3.0.65)(@pm2/io@6.1.0))(express@4.21.2)':
     dependencies:
       '@colyseus/core': 0.16.22(@colyseus/schema@3.0.65)(@pm2/io@6.1.0)
@@ -1264,6 +1303,8 @@ snapshots:
   async@2.6.4:
     dependencies:
       lodash: 4.17.21
+
+  babylonjs-gltf2interface@8.33.4: {}
 
   batch@0.6.1: {}
 
