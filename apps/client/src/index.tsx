@@ -1,11 +1,11 @@
 import { render } from "solid-js/web";
-import { createSignal, onCleanup, onMount, Show } from "solid-js";
+import { createSignal, onCleanup, onMount, Show, For } from "solid-js";
 import { Engine } from "@babylonjs/core/Engines/engine";
 import { WebGPUEngine } from "@babylonjs/core/Engines/webgpuEngine";
 import { getSceneModule } from "./createScene";
 import { AbstractEngine } from "@babylonjs/core/Engines/abstractEngine";
 import "./index.css";
-import { registerPlayer, getCurrentPlayerInfo, checkRoomExists, getAllPlayersInRoom } from "./scenes/missileCommand/colyseus";
+import { registerPlayer, getCurrentPlayerInfo, checkRoomExists, getAllPlayersInRoom, getCurrentPlayerName, listenToPlayers, type RoomPlayer } from "./scenes/missileCommand/colyseus";
 import { PlayerRole } from "./scenes/missileCommand/types";
 
 // Create the renderCanvas element
@@ -78,6 +78,9 @@ function App() {
     const [gameOverReason, setGameOverReason] = createSignal<string | undefined>(undefined);
     const [playerRole, setPlayerRole] = createSignal<PlayerRole | null>(null);
     const [showStartGame, setShowStartGame] = createSignal(true);
+    const [playerName, setPlayerName] = createSignal<string | null>(null);
+    const [players, setPlayers] = createSignal<RoomPlayer[]>([]);
+    let disposePlayers: (() => void) | null = null;
     const [isCheckingHash, setIsCheckingHash] = createSignal(true);
 
     const checkHashAndPlayer = async () => {
@@ -91,6 +94,7 @@ function App() {
                 const currentPlayerInfo = await getCurrentPlayerInfo();
                 if (currentPlayerInfo) {
                     setPlayerRole(currentPlayerInfo.role);
+                    setPlayerName(await getCurrentPlayerName());
                     setShowStartGame(false);
                 } else {
                     if (allPlayers.length === 0) {
@@ -98,6 +102,7 @@ function App() {
                     } else if (allPlayers.length === 1) {
                         await registerPlayer(PlayerRole.ATTACKER);
                         setPlayerRole(PlayerRole.ATTACKER);
+                        setPlayerName(await getCurrentPlayerName());
                         setShowStartGame(false);
                     } else {
                         setShowStartGame(false);
@@ -124,6 +129,7 @@ function App() {
         try {
             // Register this client as Defender in Firebase for this room
             await registerPlayer(PlayerRole.DEFENDER);
+            setPlayerName(await getCurrentPlayerName());
 
             const container = document.getElementById("game-container");
             if (container) {
@@ -164,6 +170,7 @@ function App() {
             // Register the player with the selected role
             await registerPlayer(role);
             setPlayerRole(role);
+            setPlayerName(await getCurrentPlayerName());
             
             // Start the game with the selected role
             setGameStarted(true);
@@ -192,11 +199,14 @@ function App() {
 
     onMount(() => {
         window.addEventListener("gameover", handleGameOver as EventListener);
+        // subscribe to players list
+        listenToPlayers((ps) => setPlayers(ps)).then((dispose) => { disposePlayers = dispose; }).catch(() => {});
         checkHashAndPlayer();
     });
 
     onCleanup(() => {
         window.removeEventListener("gameover", handleGameOver as EventListener);
+        if (disposePlayers) try { disposePlayers(); } catch (_e) {}
     });
 
     const restart = () => {
@@ -208,6 +218,9 @@ function App() {
         <div class="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 flex items-center justify-center">
             {!gameStarted() ? (
                 <div class="text-center space-y-8">
+                    <div class="max-w-2xl mx-auto">
+                        <PlayersTables players={players()} />
+                    </div>
                     <div class="space-y-4">
                         <h1 class="text-6xl font-bold text-white mb-4">
                             Missile Command
@@ -312,6 +325,14 @@ function App() {
                 </div>
             ) : (
                 <div class="relative w-full h-full flex items-center justify-center">
+                    <Show when={playerName()}>
+                        <div class="absolute top-3 left-3 text-sm text-white bg-black/40 rounded px-2 py-1">
+                            {playerName()}
+                        </div>
+                    </Show>
+                    <div class="absolute top-3 right-3 max-w-sm">
+                        <PlayersTables players={players()} small />
+                    </div>
                     <div id="game-container" class="w-full h-full flex items-center justify-center" />
                     <Show when={isGameOver()}>
                         <div class="absolute inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center">
@@ -331,6 +352,57 @@ function App() {
                     </Show>
                 </div>
             )}
+        </div>
+    );
+}
+
+function PlayersTables(props: { players: RoomPlayer[]; small?: boolean }) {
+    const defenders = () => props.players.filter(p => p.role === PlayerRole.DEFENDER);
+    const attackers = () => props.players.filter(p => p.role === PlayerRole.ATTACKER);
+    const tableCls = props.small ? "table table-xs" : "table table-sm";
+    const wrapCls = props.small ? "bg-black/40 rounded p-2 text-white" : "bg-black/40 rounded p-4 text-white";
+    return (
+        <div class={wrapCls}>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <div class="font-semibold text-yellow-300 mb-1">Defenders</div>
+                    <table class={tableCls}>
+                        <thead>
+                            <tr><th>Name</th><th class="text-right">Score</th></tr>
+                        </thead>
+                        <tbody>
+                            <For each={defenders()}>{(p) => (
+                                <tr>
+                                    <td class="pr-4 truncate max-w-[12rem]">{p.name || p.id}</td>
+                                    <td class="text-right">{p.score}</td>
+                                </tr>
+                            )}</For>
+                            <Show when={defenders().length === 0}>
+                                <tr><td colspan="2" class="opacity-70">None</td></tr>
+                            </Show>
+                        </tbody>
+                    </table>
+                </div>
+                <div>
+                    <div class="font-semibold text-pink-300 mb-1">Attackers</div>
+                    <table class={tableCls}>
+                        <thead>
+                            <tr><th>Name</th><th class="text-right">Score</th></tr>
+                        </thead>
+                        <tbody>
+                            <For each={attackers()}>{(p) => (
+                                <tr>
+                                    <td class="pr-4 truncate max-w-[12rem]">{p.name || p.id}</td>
+                                    <td class="text-right">{p.score}</td>
+                                </tr>
+                            )}</For>
+                            <Show when={attackers().length === 0}>
+                                <tr><td colspan="2" class="opacity-70">None</td></tr>
+                            </Show>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     );
 }

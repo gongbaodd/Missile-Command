@@ -99,7 +99,6 @@ export class GameRoom extends Room<GameState> {
 
     onJoin(client: Client, options: {
         role?: PlayerRole;
-        fid: string;
     }) {
         const player = new Player();
         player.id = client.sessionId;

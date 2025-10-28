@@ -259,3 +259,109 @@ export async function getAllPlayersInRoom(_roomHash?: string): Promise<PlayerInf
 }
 
 
+
+export async function getCurrentPlayerName(): Promise<string | null> {
+    try {
+        const room = await getRoom();
+        const sessionId = room.sessionId;
+
+        const tryGetName = (): string | null => {
+            const state: any = (room as any).state;
+            if (!state || !state.players) return null;
+            const players: any = state.players;
+            // Handle MapSchema-like structures
+            if (typeof players.forEach === "function" && !Array.isArray(players)) {
+                let found: string | null = null;
+                players.forEach((p: any, key: string) => {
+                    const pid = (p && (p.id ?? p.sessionId)) ?? key;
+                    if (pid === sessionId) {
+                        found = p.name ?? null;
+                    }
+                });
+                return found;
+            }
+            // Handle arrays or plain objects
+            const iterable: any[] = Array.isArray(players) ? players : Object.values(players);
+            for (const p of iterable) {
+                const pid = p && (p.id ?? p.sessionId);
+                if (pid === sessionId) return p.name ?? null;
+            }
+            return null;
+        };
+
+        const immediate = tryGetName();
+        if (immediate) return immediate;
+
+        return await new Promise<string | null>((resolve) => {
+            let resolved = false;
+            const handler = (_state: any) => {
+                if (resolved) return;
+                const name = tryGetName();
+                if (name) {
+                    resolved = true;
+                    resolve(name);
+                    try { (room as any).off?.("statechange", handler); } catch (_e) { /* noop */ }
+                }
+            };
+            room.onStateChange(handler);
+            setTimeout(() => {
+                if (resolved) return;
+                resolved = true;
+                resolve(null);
+            }, 2000);
+        });
+    } catch (_e) {
+        return null;
+    }
+}
+
+export interface RoomPlayer {
+    id: string;
+    name: string;
+    score: number;
+    role: PlayerRole;
+}
+
+export async function listenToPlayers(callback: (players: RoomPlayer[]) => void): Promise<() => void> {
+    const room = await getRoom();
+    const mapStateToPlayers = (): RoomPlayer[] => {
+        const state: any = (room as any).state;
+        if (!state || !state.players) return [];
+        const raw = state.players;
+        const result: RoomPlayer[] = [];
+        if (typeof raw.forEach === "function" && !Array.isArray(raw)) {
+            raw.forEach((p: any, key: string) => {
+                if (!p) return;
+                const id = (p.id ?? p.sessionId ?? key) as string;
+                result.push({
+                    id,
+                    name: p.name ?? "",
+                    score: typeof p.score === "number" ? p.score : 0,
+                    role: (p.role as PlayerRole) ?? PlayerRole.DEFENDER,
+                });
+            });
+        } else {
+            const iterable: any[] = Array.isArray(raw) ? raw : Object.values(raw);
+            for (const p of iterable) {
+                if (!p) continue;
+                const id = (p.id ?? p.sessionId) as string;
+                if (!id) continue;
+                result.push({
+                    id,
+                    name: p.name ?? "",
+                    score: typeof p.score === "number" ? p.score : 0,
+                    role: (p.role as PlayerRole) ?? PlayerRole.DEFENDER,
+                });
+            }
+        }
+        return result;
+    };
+
+    const emit = () => callback(mapStateToPlayers());
+    emit();
+    const handler = (_state: any) => emit();
+    room.onStateChange(handler);
+    return () => {
+        try { (room as any).off?.("statechange", handler); } catch (_e) { /* noop */ }
+    };
+}
