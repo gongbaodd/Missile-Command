@@ -21,10 +21,6 @@ function getRoomName(): string {
 
 export function getRoomHash(): string {
     const hash = window.location.hash.slice(1);
-    if (hash === "") {
-        alert("Room hash is empty");
-        throw new Error("Room hash is empty");
-    }
     return hash;
 }
 
@@ -33,18 +29,27 @@ async function getRoom(): Promise<Room> {
         const client = getClient();
         const roomName = getRoomName();
         const hash = getRoomHash();
-        // Provide hash so server can group state per room
-        roomPromise = client.joinOrCreate(roomName, { hash }).catch(async (e) => {
-            // Fallback to create, then join
-            try {
-                return await client.create(roomName, { hash });
-            } catch (_e) {
-                // As a last resort, try join
-                return await client.join(roomName, { hash });
-            }
-        });
+        // Provide hash so server can group state per room when available.
+        // If no hash present, connect without it and then reflect sessionId in URL.
+        const connect = (opts?: Record<string, unknown>) =>
+            client.joinOrCreate(roomName, opts).catch(async (_e) => {
+                try {
+                    return await client.create(roomName, opts);
+                } catch (__e) {
+                    return await client.join(roomName, opts);
+                }
+            });
+        roomPromise = hash ? connect({ hash }) : connect();
     }
     const room = await roomPromise;
+    // If no hash was present in URL, use this connection's sessionId as the room hash for bookmarking/sharing.
+    if (!window.location.hash || window.location.hash === "#") {
+        try {
+            window.location.hash = room.sessionId;
+        } catch (_e) {
+            // ignore if navigation is restricted
+        }
+    }
     $ = getStateCallbacks(room);
     return room;
 }
@@ -133,15 +138,18 @@ export async function loadRoomData(): Promise<SerializedRoomData | null> {
     try {
         const room = await getRoom();
         return await new Promise<SerializedRoomData | null>((resolve) => {
+            let resolved = false;
             const handler = (payload: SerializedRoomData) => {
-                room.offMessage("roomData", handler);
+                if (resolved) return;
+                resolved = true;
                 resolve(payload ?? null);
             };
             room.onMessage("roomData", handler);
             room.send("loadRoomData");
             // soft timeout safeguard
             setTimeout(() => {
-                room.offMessage("roomData", handler);
+                if (resolved) return;
+                resolved = true;
                 resolve(null);
             }, 2000);
         });
@@ -223,13 +231,16 @@ export async function getCurrentPlayerInfo(): Promise<PlayerInfo | null> {
         if (!fid) return null;
         room.send("getCurrentPlayerInfo", { fid });
         return await new Promise<PlayerInfo | null>((resolve) => {
+            let resolved = false;
             const handler = (payload: PlayerInfo | null) => {
-                room.offMessage("currentPlayerInfo", handler as any);
+                if (resolved) return;
+                resolved = true;
                 resolve(payload);
             };
             room.onMessage("currentPlayerInfo", handler as any);
             setTimeout(() => {
-                room.offMessage("currentPlayerInfo", handler as any);
+                if (resolved) return;
+                resolved = true;
                 resolve(null);
             }, 1500);
         });
@@ -244,13 +255,16 @@ export async function getAllPlayersInRoom(_roomHash?: string): Promise<PlayerInf
         const room = await getRoom();
         room.send("getAllPlayers");
         return await new Promise<PlayerInfo[]>((resolve) => {
+            let resolved = false;
             const handler = (payload: PlayerInfo[]) => {
-                room.offMessage("allPlayers", handler as any);
+                if (resolved) return;
+                resolved = true;
                 resolve(payload || []);
             };
             room.onMessage("allPlayers", handler as any);
             setTimeout(() => {
-                room.offMessage("allPlayers", handler as any);
+                if (resolved) return;
+                resolved = true;
                 resolve([]);
             }, 1500);
         });

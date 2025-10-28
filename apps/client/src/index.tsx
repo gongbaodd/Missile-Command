@@ -4,7 +4,6 @@ import { Engine } from "@babylonjs/core/Engines/engine";
 import { WebGPUEngine } from "@babylonjs/core/Engines/webgpuEngine";
 import { getSceneModule } from "./createScene";
 import { AbstractEngine } from "@babylonjs/core/Engines/abstractEngine";
-import { generateRandomHash } from "./utils/roomNumber";
 import "./index.css";
 import { registerPlayer, getCurrentPlayerInfo, checkRoomExists, getAllPlayersInRoom } from "./scenes/missileCommand/colyseus";
 import { PlayerRole } from "./scenes/missileCommand/types";
@@ -131,11 +130,9 @@ function App() {
         setFinalScore(0);
         setGameOverReason(undefined);
         
-        // Generate a random hash and navigate to it
-        const roomHash = generateRandomHash();
-        window.location.hash = roomHash;
-        console.log("Generated room hash:", roomHash);
-        
+        // The URL hash will be set to the Colyseus sessionId after connecting
+        // in the networking layer; no need to generate one here.
+
         try {
             // Register this client as Defender in Firebase for this room
             await registerPlayer(PlayerRole.DEFENDER);
