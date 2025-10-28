@@ -25,6 +25,7 @@
     "@colyseus/core": "^0.16.0",
     "@colyseus/monitor": "^0.16.0",
     "@colyseus/playground": "^0.16.0",
+    "@colyseus/schema": "^3.0.65",
     "@colyseus/tools": "^0.16.0",
     "colyseus": "^0.16.0",
     "cors": "^2.8.5",
