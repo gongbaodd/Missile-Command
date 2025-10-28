@@ -1,10 +1,11 @@
 import type { House, Missile } from "./types";
 import { PlayerRole } from "./types";
-import { Client, Room } from "colyseus.js";
+import { Client, Room, getStateCallbacks } from "colyseus.js";
 
 // Colyseus client singleton
 let client: Client | null = null;
 let roomPromise: Promise<Room> | null = null;
+let $: ReturnType<typeof getStateCallbacks> | null = null;
 
 function getClient(): Client {
     if (!client) {
@@ -43,7 +44,9 @@ async function getRoom(): Promise<Room> {
             }
         });
     }
-    return roomPromise;
+    const room = await roomPromise;
+    $ = getStateCallbacks(room);
+    return room;
 }
 
 // Serialized interfaces for storage/messaging parity with previous Firebase module
@@ -207,7 +210,7 @@ export async function registerPlayer(role: PlayerRole): Promise<void> {
             fid = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
             localStorage.setItem("mc_fid", fid);
         }
-        room.send("registerPlayer", { role, fid, lastSeen: Date.now() });
+        room.send("registerPlayer", { role, fid });
     } catch (error) {
         console.error("Failed to register player via Colyseus:", error);
     }

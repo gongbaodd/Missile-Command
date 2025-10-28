@@ -11,10 +11,6 @@ class Player extends Schema {
 	@type("string") role: PlayerRole;
 }
 
-interface IOnJoinOptions {
-	role?: PlayerRole;
-}
-
 class Vec3 extends Schema {
     @type("number") x: number = 0;
     @type("number") y: number = 0;
@@ -68,12 +64,14 @@ class GameState extends Schema {
     @type([Marker]) markers: ArraySchema<Marker> = new ArraySchema<Marker>();
     @type("boolean") isGameOver: boolean = false;
     @type("number") score: number = 0;
+    @type("string") hash: string = "";
 }
 
 export class GameRoom extends Room<GameState> {
     state = new GameState();
-    onCreate() {
-        // Basic chat (kept)
+    onCreate(options: { hash: string }) {
+        this.state.hash = options.hash;
+
         this.onMessage("message", (client, message) => {
             console.log("ChatRoom received message from", client.sessionId, ":", message);
             this.broadcast("messages", `(${client.sessionId}) ${message}`);
@@ -99,7 +97,10 @@ export class GameRoom extends Room<GameState> {
         this.setSimulationInterval((deltaTime) => this.update(deltaTime), 50);
     }
 
-    onJoin(client: Client, options: IOnJoinOptions) {
+    onJoin(client: Client, options: {
+        role?: PlayerRole;
+        fid: string;
+    }) {
         const player = new Player();
         player.id = client.sessionId;
         player.name = generateUsername("-", 2, 20);

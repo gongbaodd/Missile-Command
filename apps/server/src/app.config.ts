@@ -18,7 +18,7 @@ export default config({
     },
 
     initializeGameServer: (gameServer) => {
-        gameServer.define("room", GameRoom)
+        gameServer.define("missile_command", GameRoom)
             .enableRealtimeListing();
 
         gameServer.onShutdown(function(){
