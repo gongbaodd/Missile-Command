@@ -71,9 +71,16 @@ export interface SerializedMissile {
     color: SerializedColor4;
 }
 
+export interface SerializedLaser {
+    position: SerializedVector3;
+    isBusy: boolean;
+    shootTime: number;
+}
+
 export interface SerializedRoomData {
     houses: SerializedHouse[];
     missiles: SerializedMissile[];
+    lasers: SerializedLaser[];
     timestamp: number;
 }
 
@@ -111,6 +118,7 @@ export async function saveRoomData(houses: House[], missiles: Missile[]): Promis
         const data: SerializedRoomData = {
             houses: serializeHouses(houses),
             missiles: serializeMissiles(missiles),
+            lasers: [],
             timestamp: Date.now(),
         };
         room.send("saveRoomData", data);
@@ -139,7 +147,8 @@ export async function loadRoomData(): Promise<SerializedRoomData | null> {
 
             const housesRaw = mapLikeToArray(state.houses);
             const missilesRaw = mapLikeToArray(state.missiles);
-            if (!housesRaw.length && !missilesRaw.length) return null;
+            const lasersRaw = mapLikeToArray(state.lasers);
+            if (!housesRaw.length && !missilesRaw.length && !lasersRaw.length) return null;
 
             const houses: SerializedHouse[] = housesRaw.map((h: any) => ({
                 position: { x: h.position?.x ?? 0, y: h.position?.y ?? 0, z: h.position?.z ?? 0 },
@@ -158,7 +167,12 @@ export async function loadRoomData(): Promise<SerializedRoomData | null> {
                 isHit: !!m.isHit,
                 color: { r: m.color?.r ?? 1, g: m.color?.g ?? 1, b: m.color?.b ?? 1, a: m.color?.a },
             }));
-            return { houses, missiles, timestamp: Date.now() };
+            const lasers: SerializedLaser[] = lasersRaw.map((l: any) => ({
+                position: { x: l.position?.x ?? 0, y: l.position?.y ?? 0, z: l.position?.z ?? 0 },
+                isBusy: !!l.isBusy,
+                shootTime: typeof l.shootTime === "number" ? l.shootTime : 0,
+            }));
+            return { houses, missiles, lasers, timestamp: Date.now() };
         };
 
         return snapshotFromState();
@@ -198,6 +212,7 @@ export function listenToRoomData(callback: (data: SerializedRoomData | null) => 
             };
             const housesRaw = mapLikeToArray(state.houses);
             const missilesRaw = mapLikeToArray(state.missiles);
+            const lasersRaw = mapLikeToArray(state.lasers);
             const data: SerializedRoomData = {
                 houses: housesRaw.map((h: any) => ({
                     position: { x: h.position?.x ?? 0, y: h.position?.y ?? 0, z: h.position?.z ?? 0 },
@@ -215,6 +230,11 @@ export function listenToRoomData(callback: (data: SerializedRoomData | null) => 
                     isActive: !!m.isActive,
                     isHit: !!m.isHit,
                     color: { r: m.color?.r ?? 1, g: m.color?.g ?? 1, b: m.color?.b ?? 1, a: m.color?.a },
+                })),
+                lasers: lasersRaw.map((l: any) => ({
+                    position: { x: l.position?.x ?? 0, y: l.position?.y ?? 0, z: l.position?.z ?? 0 },
+                    isBusy: !!l.isBusy,
+                    shootTime: typeof l.shootTime === "number" ? l.shootTime : 0,
                 })),
                 timestamp: Date.now(),
             };

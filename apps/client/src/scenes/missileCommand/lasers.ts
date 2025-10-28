@@ -5,23 +5,35 @@ import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { type LaserSystem, type Marker, type SceneContext } from "./types";
+import { loadRoomData, type SerializedLaser } from "./colyseus";
 
-export function createLaserSystems(ctx: SceneContext): void {
-    const laserPositions = [
-        new Vector3(25, 0, 5),
-        new Vector3(-15, 0, 20),
-        new Vector3(-5, 0, -25)
-    ];
+export async function createLaserSystems(ctx: SceneContext): Promise<void> {
+    let lasersFromServer: SerializedLaser[] | null = null;
+    try {
+        const data = await loadRoomData();
+        lasersFromServer = data?.lasers ?? null;
+    } catch (_e) {
+        lasersFromServer = null;
+    }
 
-    for (let i = 0; i < laserPositions.length; i++) {
-        const position = laserPositions[i];
-        const laserMesh = createLaserMesh(ctx, position);
+    const items: LaserSystem[] = (lasersFromServer && lasersFromServer.length > 0)
+        ? lasersFromServer.map(l => ({
+            mesh: createLaserMesh(ctx, new Vector3(l.position.x, l.position.y, l.position.z)),
+            position: new Vector3(l.position.x, l.position.y, l.position.z),
+            isBusy: !!l.isBusy,
+            shootTime: l.shootTime,
+            color: new Color3(0, 1, 0).toColor4(1)
+        }))
+        : [];
+
+    for (const item of items) {
+        const laserMesh = createLaserMesh(ctx, item.position);
 
         ctx.gameState.lasers.push({
             mesh: laserMesh,
-            position,
-            isBusy: false,
-            shootTime: 0,
+            position: item.position,
+            isBusy: item.isBusy,
+            shootTime: item.shootTime,
             color: new Color3(0, 1, 0,).toColor4(1)
         });
     }

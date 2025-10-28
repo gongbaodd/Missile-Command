@@ -108,7 +108,7 @@ export class MissileCommandScene implements CreateSceneClass {
         this.createGround();
 
         // Create laser systems
-        this.createLaserSystems();
+        await this.createLaserSystems();
 
         // Create houses
         await this.createHouses();
@@ -204,8 +204,8 @@ export class MissileCommandScene implements CreateSceneClass {
         await createHousesEnv(this.getCtx());
     }
 
-    private createLaserSystems(): void {
-        createLaserSystemsSys(this.getCtx());
+    private async createLaserSystems(): Promise<void> {
+        await createLaserSystemsSys(this.getCtx());
     }
 
     private createCursor(): void {
