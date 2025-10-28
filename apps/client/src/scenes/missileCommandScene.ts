@@ -21,7 +21,7 @@ import { PlayerRole } from "./missileCommand/types";
 import { createGround as createGroundEnv, createHouses as createHousesEnv } from "./missileCommand/environment";
 import { createLaserSystems as createLaserSystemsSys, createPlusMarker as createPlusMarkerMesh, findNearestAvailableLaser as findNearestLaser, updateLasers as updateLasersSys } from "./missileCommand/lasers";
 import { updateMissiles as updateMissilesSys, dropMissileAt } from "./missileCommand/missiles";
-import { listenForMissileSpawns, emitMissileSpawn } from "./missileCommand/firebase";
+import { listenForMissileSpawns, emitMissileSpawn } from "./missileCommand/colyseus";
 
 export class MissileCommandScene implements CreateSceneClass {
     private scene!: Scene;

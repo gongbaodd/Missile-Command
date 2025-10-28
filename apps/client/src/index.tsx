@@ -6,7 +6,7 @@ import { getSceneModule } from "./createScene";
 import { AbstractEngine } from "@babylonjs/core/Engines/abstractEngine";
 import { generateRandomHash } from "./utils/roomNumber";
 import "./index.css";
-import { registerPlayer, getCurrentPlayerInfo, checkRoomExists, getAllPlayersInRoom } from "./scenes/missileCommand/firebase";
+import { registerPlayer, getCurrentPlayerInfo, checkRoomExists, getAllPlayersInRoom } from "./scenes/missileCommand/colyseus";
 import { PlayerRole } from "./scenes/missileCommand/types";
 
 // Create the renderCanvas element

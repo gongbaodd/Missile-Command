@@ -26,6 +26,7 @@
     "@rsbuild/plugin-babel": "^1.0.6",
     "@rsbuild/plugin-solid": "^1.0.6",
     "@types/yuka": "^0.7.4",
+    "colyseus.js": "^0.16.22",
     "firebase": "^12.3.0",
     "recast-detour": "^1.6.4",
     "solid-js": "^1.9.9",

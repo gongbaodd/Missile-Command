@@ -3,7 +3,7 @@ import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { COLORS, type Missile, type SceneContext } from "./types";
-import { saveRoomData } from "./firebase";
+import { saveRoomData } from "./colyseus";
 
 export function updateMissiles(ctx: SceneContext, _spawnIntervalMs: number, _spawnTimerRef: { value: number }): void {
 	// Auto-spawn removed. Only update existing missiles.
