@@ -1,11 +1,11 @@
 import type { House, Missile } from "./types";
 import { PlayerRole } from "./types";
-import { Client, Room, getStateCallbacks } from "colyseus.js";
+import { Client, Room } from "colyseus.js";
 
 // Colyseus client singleton
 let client: Client | null = null;
 let roomPromise: Promise<Room> | null = null;
-let $: ReturnType<typeof getStateCallbacks> | null = null;
+// removed state callbacks singleton as it's not used by the client code
 
 function getClient(): Client {
     if (!client) {
@@ -19,18 +19,10 @@ function getRoomName(): string {
     return "missile_command";
 }
 
-export function getRoomHash(): string {
-    const hash = window.location.hash.slice(1);
-    return hash;
-}
-
 async function getRoom(): Promise<Room> {
     if (!roomPromise) {
         const client = getClient();
         const roomName = getRoomName();
-        const hash = getRoomHash();
-        // Provide hash so server can group state per room when available.
-        // If no hash present, connect without it and then reflect sessionId in URL.
         const connect = (opts?: Record<string, unknown>) =>
             client.joinOrCreate(roomName, opts).catch(async (_e) => {
                 try {
@@ -39,18 +31,10 @@ async function getRoom(): Promise<Room> {
                     return await client.join(roomName, opts);
                 }
             });
-        roomPromise = hash ? connect({ hash }) : connect();
+        // Always connect to the single room; no hash-based segregation
+        roomPromise = connect();
     }
     const room = await roomPromise;
-    // If no hash was present in URL, use this connection's sessionId as the room hash for bookmarking/sharing.
-    if (!window.location.hash || window.location.hash === "#") {
-        try {
-            window.location.hash = room.sessionId;
-        } catch (_e) {
-            // ignore if navigation is restricted
-        }
-    }
-    $ = getStateCallbacks(room);
     return room;
 }
 

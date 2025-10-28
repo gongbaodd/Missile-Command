@@ -5,7 +5,7 @@ import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { COLORS, type House, type SceneContext } from "./types";
 import { Vector3 as YukaVector3, AABB as YukaAABB } from "yuka";
-import { loadRoomData, saveRoomData, type SerializedHouse } from "./firebase";
+import { loadRoomData, saveRoomData, type SerializedHouse } from "./colyseus";
 
 export function createGround(ctx: SceneContext): Mesh {
     const ground = MeshBuilder.CreateCylinder("ground", {

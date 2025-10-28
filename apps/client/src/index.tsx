@@ -84,35 +84,23 @@ function App() {
         setIsCheckingHash(true);
         
         try {
-            const hash = window.location.hash.slice(1);
-            
-            if (hash) {
-                // Check if room exists in Firebase
-                const roomExists = await checkRoomExists(hash);
-                
-                if (roomExists) {
-                    // Get all players in the room
-                    const allPlayers = await getAllPlayersInRoom(hash);
-                    const currentPlayerInfo = await getCurrentPlayerInfo();
-                    
-                    if (currentPlayerInfo) {
-                        // Current user is already in the room
-                        setPlayerRole(currentPlayerInfo.role);
+            // Single-room server: always check the one room
+            const roomExists = await checkRoomExists();
+            if (roomExists) {
+                const allPlayers = await getAllPlayersInRoom();
+                const currentPlayerInfo = await getCurrentPlayerInfo();
+                if (currentPlayerInfo) {
+                    setPlayerRole(currentPlayerInfo.role);
+                    setShowStartGame(false);
+                } else {
+                    if (allPlayers.length === 0) {
+                        setShowStartGame(true);
+                    } else if (allPlayers.length === 1) {
+                        await registerPlayer(PlayerRole.ATTACKER);
+                        setPlayerRole(PlayerRole.ATTACKER);
                         setShowStartGame(false);
                     } else {
-                        // Current user is not in the room yet
-                        if (allPlayers.length === 0) {
-                            // Room is empty, show start game
-                            setShowStartGame(true);
-                        } else if (allPlayers.length === 1) {
-                            // Room has one player, register as attacker
-                            await registerPlayer(PlayerRole.ATTACKER);
-                            setPlayerRole(PlayerRole.ATTACKER);
-                            setShowStartGame(false);
-                        } else {
-                            // Room has two players, show role selection
-                            setShowStartGame(false);
-                        }
+                        setShowStartGame(false);
                     }
                 }
             }
