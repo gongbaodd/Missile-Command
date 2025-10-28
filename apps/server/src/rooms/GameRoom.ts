@@ -82,10 +82,10 @@ export class GameRoom extends Room<GameState> {
             this.spawnMissile(x, z);
         });
 
-        this.onMessage("add_marker", (client, { x, z }: { x: number; z: number }) => {
+        this.onMessage("add_marker", (client, { x, y, z }: { x: number; y: number; z: number }) => {
             const player = this.findPlayer(client.sessionId);
             if (!player || player.role !== PlayerRole.DEFENDER) return;
-            this.addMarker(x, z);
+            this.addMarker(x, y, z);
         });
 
         // Initialize scene
@@ -318,7 +318,7 @@ export class GameRoom extends Room<GameState> {
         this.state.missiles.push(m);
     }
 
-    private addMarker(x: number, z: number): void {
+    private addMarker(x: number, y: number, z: number): void {
         const laserIndex = this.findNearestAvailableLaser(x, z);
         if (laserIndex < 0) return;
         const laser = this.state.lasers[laserIndex];
@@ -327,7 +327,7 @@ export class GameRoom extends Room<GameState> {
         laser.target = target; laser.shootTime = 0;
 
         const marker = new Marker();
-        marker.position.x = x; marker.position.y = 0; marker.position.z = z;
+        marker.position.x = x; marker.position.y = y; marker.position.z = z;
         marker.time = 0; marker.isDone = false; marker.assignedLaserIndex = laserIndex;
         this.state.markers.push(marker);
     }

@@ -19,9 +19,9 @@ import "@babylonjs/core/Culling/ray";
 import type { GameState, SceneContext } from "./missileCommand/types";
 import { PlayerRole } from "./missileCommand/types";
 import { createGround as createGroundEnv, createHouses as createHousesEnv } from "./missileCommand/environment";
-import { createLaserSystems as createLaserSystemsSys, createPlusMarker as createPlusMarkerMesh, findNearestAvailableLaser as findNearestLaser, updateLasers as updateLasersSys } from "./missileCommand/lasers";
+import { createLaserSystems as createLaserSystemsSys, createPlusMarker as createPlusMarkerMesh, updateLasers as updateLasersSys } from "./missileCommand/lasers";
 import { updateMissiles as updateMissilesSys, dropMissileAt } from "./missileCommand/missiles";
-import { listenForMissileSpawns, emitMissileSpawn } from "./missileCommand/colyseus";
+import { listenForMissileSpawns, emitMissileSpawn, listenToMarkers, emitAddMarker, type SerializedMarker } from "./missileCommand/colyseus";
 
 export class MissileCommandScene implements CreateSceneClass {
     private scene!: Scene;
@@ -48,6 +48,7 @@ export class MissileCommandScene implements CreateSceneClass {
     private shadowGenerator!: ShadowGenerator;
     private missileSpawnInterval: number = 3000; // 3 seconds
     private missileSpawnTimerRef = { value: 0 };
+    private markerByTime: Map<number, number> = new Map(); // time -> index in gameState.markers
 
     setPlayerRole(role: PlayerRole): void {
         this.playerRole = role;
@@ -133,6 +134,8 @@ export class MissileCommandScene implements CreateSceneClass {
                 seenSpawnEvents.add(key);
                 dropMissileAt(this.getCtx(), x, z);
             });
+            // Listen and mirror markers from server state
+            listenToMarkers((markers) => this.syncMarkersFromServer(markers));
         } catch (_e) {
             // ignore listener failures in non-browser envs
         }
@@ -319,51 +322,88 @@ export class MissileCommandScene implements CreateSceneClass {
                         emitMissileSpawn(p.x, p.z);
                 } else if (pickInfo.pickedMesh === this.ground) {
                     // Only defenders can click the ground
-                    this.addMarker(this.cursorDot.getAbsolutePosition().clone());
+                    const worldPos = this.cursorDot.getAbsolutePosition().clone();
+                    emitAddMarker(worldPos.x, worldPos.y, worldPos.z);
                     this.resetCursorDot();
                 }
             }
         }
     }
 
-    private addMarker(position: Vector3): void {
-        const availableLaser = findNearestLaser(this.getCtx(), position);
-        if (!availableLaser) return;
+    private syncMarkersFromServer(serverMarkers: SerializedMarker[]): void {
+        // Remove local markers that no longer exist on server
+        const serverTimes = new Set<number>(serverMarkers.map(m => m.time));
+        for (let i = this.gameState.markers.length - 1; i >= 0; i--) {
+            const local = this.gameState.markers[i];
+            if (!serverTimes.has(local.time)) {
+                local.mesh.dispose();
+                this.gameState.markers.splice(i, 1);
+            }
+        }
+        this.markerByTime.clear();
+        for (let i = 0; i < this.gameState.markers.length; i++) {
+            this.markerByTime.set(this.gameState.markers[i].time, i);
+        }
 
-        const markerMesh = createPlusMarkerMesh(this.getCtx(), position);
-        const marker = {
-            position,
-            time: 0,
-            isDone: false,
-            assignedLaser: availableLaser,
-            mesh: markerMesh
-        };
-        this.gameState.markers.push(marker);
+        // Upsert server markers locally
+        for (const sm of serverMarkers) {
+            const existingIndex = this.markerByTime.get(sm.time);
+            if (existingIndex !== undefined) {
+                const local = this.gameState.markers[existingIndex];
+                local.position.x = sm.position.x;
+                local.position.y = sm.position.y;
+                local.position.z = sm.position.z;
+                local.mesh.position.set(sm.position.x, Math.max(0.5, sm.position.y), sm.position.z);
+                local.isDone = !!sm.isDone;
+                if (local.isDone) {
+                    local.mesh.dispose();
+                }
+                continue;
+            }
 
-        availableLaser.isBusy = true;
-        availableLaser.target = position.clone();
-        availableLaser.currentMarker = marker;
+            // Create new local marker mesh
+            const pos = new Vector3(sm.position.x, sm.position.y, sm.position.z);
+            const markerMesh = createPlusMarkerMesh(this.getCtx(), pos);
+            const marker = {
+                position: pos,
+                time: sm.time,
+                isDone: !!sm.isDone,
+                mesh: markerMesh
+            } as any;
+            this.gameState.markers.push(marker);
 
-        const start = new Vector3(availableLaser.position.x, 3.5, availableLaser.position.z);
-        const end = marker.mesh.position.clone();
-        const direction = end.subtract(start);
-        const totalLength = direction.length();
-        const normalizedDir = direction.normalize();
+            // Drive laser visuals if assigned
+            const assignedIdx = sm.assignedLaserIndex;
+            if (typeof assignedIdx === "number" && assignedIdx >= 0 && assignedIdx < this.gameState.lasers.length) {
+                const laser = this.gameState.lasers[assignedIdx];
+                if (!laser.isBusy) {
+                    laser.isBusy = true;
+                    laser.target = pos.clone();
+                    (laser as any).currentMarker = marker;
 
-        const beam = MeshBuilder.CreateLines("laserBeam", {
-            points: [start, start],
-            updatable: true
-        }, this.scene);
-        const beamMaterial = new StandardMaterial("beamMaterial", this.scene);
-        beamMaterial.diffuseColor = new Color3(0, 0.2, 0);
-        beamMaterial.emissiveColor = new Color3(0, 1, 0);
-        beam.material = beamMaterial;
-        beam.isPickable = false;
+                    const start = new Vector3(laser.position.x, 3.5, laser.position.z);
+                    const end = marker.mesh.position.clone();
+                    const direction = end.subtract(start);
+                    const totalLength = direction.length();
+                    const normalizedDir = direction.normalize();
 
-        availableLaser.beamMesh = beam;
-        availableLaser.beamCurrentLength = 0;
-        availableLaser.beamTotalLength = totalLength;
-        availableLaser.beamDirection = normalizedDir;
+                    const beam = MeshBuilder.CreateLines("laserBeam", {
+                        points: [start, start],
+                        updatable: true
+                    }, this.scene);
+                    const beamMaterial = new StandardMaterial("beamMaterial", this.scene);
+                    beamMaterial.diffuseColor = new Color3(0, 0.2, 0);
+                    beamMaterial.emissiveColor = new Color3(0, 1, 0);
+                    beam.material = beamMaterial;
+                    beam.isPickable = false;
+
+                    laser.beamMesh = beam;
+                    laser.beamCurrentLength = 0;
+                    laser.beamTotalLength = totalLength;
+                    laser.beamDirection = normalizedDir;
+                }
+            }
+        }
     }
 
     private startGameLoop(): void {

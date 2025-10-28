@@ -77,6 +77,13 @@ export interface SerializedLaser {
     shootTime: number;
 }
 
+export interface SerializedMarker {
+    position: SerializedVector3;
+    time: number;
+    isDone: boolean;
+    assignedLaserIndex: number; // -1 when unassigned
+}
+
 export interface SerializedRoomData {
     houses: SerializedHouse[];
     missiles: SerializedMissile[];
@@ -447,6 +454,56 @@ export async function listenToPlayers(callback: (players: RoomPlayer[]) => void)
     };
 
     const emit = () => callback(mapStateToPlayers());
+    emit();
+    const handler = (_state: any) => emit();
+    room.onStateChange(handler);
+    return () => {
+        try { (room as any).off?.("statechange", handler); } catch (_e) { /* noop */ }
+    };
+}
+
+export async function emitAddMarker(x: number, y: number, z: number): Promise<void> {
+    try {
+        const room = await getRoom();
+        room.send("add_marker", { x, y, z });
+    } catch (error) {
+        console.error("Failed to emit add_marker via Colyseus:", error);
+    }
+}
+
+export async function listenToMarkers(callback: (markers: SerializedMarker[]) => void): Promise<() => void> {
+    const room = await getRoom();
+    const mapStateToMarkers = (): SerializedMarker[] => {
+        const state: any = (room as any).state;
+        if (!state || !state.markers) return [];
+        const raw = state.markers;
+        const result: SerializedMarker[] = [];
+        if (typeof raw.forEach === "function" && !Array.isArray(raw)) {
+            raw.forEach((m: any) => {
+                if (!m) return;
+                result.push({
+                    position: { x: m.position?.x ?? 0, y: m.position?.y ?? 0, z: m.position?.z ?? 0 },
+                    time: typeof m.time === "number" ? m.time : 0,
+                    isDone: !!m.isDone,
+                    assignedLaserIndex: typeof m.assignedLaserIndex === "number" ? m.assignedLaserIndex : -1,
+                });
+            });
+        } else {
+            const iterable: any[] = Array.isArray(raw) ? raw : Object.values(raw);
+            for (const m of iterable) {
+                if (!m) continue;
+                result.push({
+                    position: { x: m.position?.x ?? 0, y: m.position?.y ?? 0, z: m.position?.z ?? 0 },
+                    time: typeof m.time === "number" ? m.time : 0,
+                    isDone: !!m.isDone,
+                    assignedLaserIndex: typeof m.assignedLaserIndex === "number" ? m.assignedLaserIndex : -1,
+                });
+            }
+        }
+        return result;
+    };
+
+    const emit = () => callback(mapStateToMarkers());
     emit();
     const handler = (_state: any) => emit();
     room.onStateChange(handler);
