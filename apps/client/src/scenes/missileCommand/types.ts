@@ -75,6 +75,8 @@ export interface SceneContext {
 	scene: Scene;
 	shadowGenerator: ShadowGenerator;
 	gameState: GameState;
+	// Called when a missile is removed locally (e.g., hit ground); used to suppress re-adding from server temporarily
+	onMissileLocallyRemoved?: (id: string) => void;
 }
 
 export enum PlayerRole {

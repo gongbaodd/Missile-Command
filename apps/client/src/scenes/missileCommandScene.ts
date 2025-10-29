@@ -20,8 +20,8 @@ import type { GameState, SceneContext } from "./missileCommand/types";
 import { PlayerRole } from "./missileCommand/types";
 import { createGround as createGroundEnv, createHouses as createHousesEnv } from "./missileCommand/environment";
 import { createLaserSystems as createLaserSystemsSys, createPlusMarker as createPlusMarkerMesh, updateLasers as updateLasersSys } from "./missileCommand/lasers";
-import { updateMissiles as updateMissilesSys, dropMissileAt } from "./missileCommand/missiles";
-import { listenForMissileSpawns, emitMissileSpawn, listenToMarkers, emitAddMarker, type SerializedMarker } from "./missileCommand/colyseus";
+import { updateMissiles as updateMissilesSys } from "./missileCommand/missiles";
+import { emitMissileSpawn, listenToMarkers, emitAddMarker, type SerializedMarker, listenToMissiles, type SerializedMissile } from "./missileCommand/colyseus";
 
 export class MissileCommandScene implements CreateSceneClass {
     private scene!: Scene;
@@ -49,6 +49,7 @@ export class MissileCommandScene implements CreateSceneClass {
     private missileSpawnInterval: number = 3000; // 3 seconds
     private missileSpawnTimerRef = { value: 0 };
     private markerByTime: Map<number, number> = new Map(); // time -> index in gameState.markers
+    private locallyRemovedMissileIds: Set<string> = new Set();
 
     setPlayerRole(role: PlayerRole): void {
         this.playerRole = role;
@@ -126,19 +127,11 @@ export class MissileCommandScene implements CreateSceneClass {
         // Start game loop
         this.startGameLoop();
 
-        // Listen to cross-client missile spawns and spawn locally once per event
-        try {
-            const seenSpawnEvents = new Set<string>();
-            listenForMissileSpawns((x, z, key) => {
-                if (seenSpawnEvents.has(key)) return;
-                seenSpawnEvents.add(key);
-                dropMissileAt(this.getCtx(), x, z);
-            });
-            // Listen and mirror markers from server state
-            listenToMarkers((markers) => this.syncMarkersFromServer(markers));
-        } catch (_e) {
-            // ignore listener failures in non-browser envs
-        }
+        // Listen and mirror markers from server state
+        listenToMarkers((markers) => this.syncMarkersFromServer(markers));
+
+		// Listen and mirror missiles from server state
+		listenToMissiles((missiles) => this.syncMissilesFromServer(missiles));
 
         return this.scene;
     };
@@ -148,7 +141,12 @@ export class MissileCommandScene implements CreateSceneClass {
             scene: this.scene,
             shadowGenerator: this.shadowGenerator,
             gameState: this.gameState,
+            onMissileLocallyRemoved: (id: string) => this.onMissileLocallyRemoved(id),
         };
+    }
+
+    private onMissileLocallyRemoved(id: string): void {
+        this.locallyRemovedMissileIds.add(id);
     }
 
     private setupCamera(canvas: HTMLCanvasElement): void {
@@ -317,7 +315,6 @@ export class MissileCommandScene implements CreateSceneClass {
                 if (pickInfo.pickedMesh === this.dropPanel) {
                     // Only attackers can click the drop panel
                     const p = pickInfo.pickedPoint!;
-                        dropMissileAt(this.getCtx(), p.x, p.z);
                         // Emit event so all clients spawn it
                         emitMissileSpawn(p.x, p.z);
                 } else if (pickInfo.pickedMesh === this.ground) {
@@ -450,6 +447,86 @@ export class MissileCommandScene implements CreateSceneClass {
     private updateMissiles(): void {
         updateMissilesSys(this.getCtx(), this.missileSpawnInterval, this.missileSpawnTimerRef);
     }
+
+	private syncMissilesFromServer(serverMissiles: SerializedMissile[]): void {
+		// If server has no missiles, clear all local missiles
+		if (!serverMissiles || serverMissiles.length === 0) {
+			for (let i = this.gameState.missiles.length - 1; i >= 0; i--) {
+				this.gameState.missiles[i].mesh.dispose();
+			}
+			this.gameState.missiles = [];
+			// Clear suppression set when server confirms empty state
+			this.locallyRemovedMissileIds.clear();
+			return;
+		}
+
+		// Build index of current missiles by id for quick lookup
+		const localIndexById = new Map<string, number>();
+		for (let i = 0; i < this.gameState.missiles.length; i++) {
+			const mid = this.gameState.missiles[i].id;
+			if (mid) localIndexById.set(mid, i);
+		}
+
+		// Remove local missiles no longer present on server (also remove those without id)
+		const serverIds = new Set<string>(serverMissiles.map(m => m.id!).filter(Boolean));
+		// Drop any locally removed ids that the server no longer reports
+		for (const id of Array.from(this.locallyRemovedMissileIds)) {
+			if (!serverIds.has(id)) {
+				this.locallyRemovedMissileIds.delete(id);
+			}
+		}
+		for (let i = this.gameState.missiles.length - 1; i >= 0; i--) {
+			const local = this.gameState.missiles[i];
+			const id = local.id;
+			if (!id || !serverIds.has(id) || this.locallyRemovedMissileIds.has(id)) {
+				local.mesh.dispose();
+				this.gameState.missiles.splice(i, 1);
+			}
+		}
+
+		// Upsert/update from server
+		for (const sm of serverMissiles) {
+			const id = sm.id ?? "";
+			if (id && this.locallyRemovedMissileIds.has(id)) {
+				// Suppress re-adding missiles that were removed locally until server drops them
+				continue;
+			}
+			const idx = id ? localIndexById.get(id) : undefined;
+			if (idx !== undefined) {
+				const local = this.gameState.missiles[idx];
+				local.position.set(sm.position.x, sm.position.y, sm.position.z);
+				local.mesh.position.set(sm.position.x, sm.position.y, sm.position.z);
+				local.target.set(sm.target.x, sm.target.y, sm.target.z);
+				local.speed = sm.speed;
+				local.verticalVelocity = sm.verticalVelocity;
+				local.isHit = !!sm.isHit;
+				local.isActive = !!sm.isActive;
+				if (!local.isActive) {
+					local.mesh.dispose();
+				}
+				continue;
+			}
+
+			// Create new local missile mesh for new server missile
+			const sphere = MeshBuilder.CreateSphere("missile", { diameter: 2 }, this.scene);
+			sphere.position.set(sm.position.x, sm.position.y, sm.position.z);
+			const mat = new StandardMaterial("missileMaterial", this.scene);
+			mat.diffuseColor = new Color3(sm.color.r, sm.color.g, sm.color.b);
+			sphere.material = mat;
+			const missile = {
+				mesh: sphere,
+				position: sphere.position.clone(),
+				target: new Vector3(sm.target.x, sm.target.y, sm.target.z),
+				speed: sm.speed,
+				verticalVelocity: sm.verticalVelocity,
+				isActive: !!sm.isActive,
+				isHit: !!sm.isHit,
+				color: new Color4(sm.color.r, sm.color.g, sm.color.b, sm.color.a ?? 1),
+				id: id || undefined
+			} as any;
+			this.gameState.missiles.push(missile);
+		}
+	}
 
     
 

@@ -120,21 +120,6 @@ export function serializeMissiles(missiles: Missile[]): SerializedMissile[] {
     }));
 }
 
-export async function saveRoomData(houses: House[], missiles: Missile[]): Promise<void> {
-    try {
-        const room = await getRoom();
-        const data: SerializedRoomData = {
-            houses: serializeHouses(houses),
-            missiles: serializeMissiles(missiles),
-            lasers: [],
-            timestamp: Date.now(),
-        };
-        room.send("saveRoomData", data);
-    } catch (error) {
-        console.error("Failed to save room data via Colyseus:", error);
-    }
-}
-
 export async function loadRoomData(): Promise<SerializedRoomData | null> {
     try {
         const room = await getRoom();
@@ -268,26 +253,10 @@ export function listenToRoomData(callback: (data: SerializedRoomData | null) => 
 export async function emitMissileSpawn(x: number, z: number): Promise<void> {
     try {
         const room = await getRoom();
-        room.send("missileSpawn", { x, z, t: Date.now() });
+        room.send("spawn_missile", { x, z });
     } catch (error) {
         console.error("Failed to emit missile spawn via Colyseus:", error);
     }
-}
-
-export function listenForMissileSpawns(callback: (x: number, z: number, eventKey: string) => void): () => void {
-    let disposed = false;
-    getRoom().then((room) => {
-        if (disposed) return;
-        const handler = (payload: { x: number; z: number; t?: number; id?: string }) => {
-            const key = payload.id || `${payload.x},${payload.z},${payload.t ?? Date.now()}`;
-            callback(payload.x, payload.z, key);
-        };
-        room.onMessage("missileSpawn", handler);
-        room.send("subscribeMissileSpawns");
-    }).catch((_e) => { /* ignore */ });
-    return () => {
-        disposed = true;
-    };
 }
 
 
@@ -522,6 +491,55 @@ export async function listenToMarkers(callback: (markers: SerializedMarker[]) =>
     };
 
     const emit = () => callback(mapStateToMarkers());
+    emit();
+    const handler = (_state: any) => emit();
+    room.onStateChange(handler);
+    return () => {
+        try { (room as any).off?.("statechange", handler); } catch (_e) { /* noop */ }
+    };
+}
+
+export async function listenToMissiles(callback: (missiles: SerializedMissile[]) => void): Promise<() => void> {
+    const room = await getRoom();
+    const mapStateToMissiles = (): SerializedMissile[] => {
+        const state: any = (room as any).state;
+        if (!state || !state.missiles) return [];
+        const raw = state.missiles;
+        const result: SerializedMissile[] = [];
+        if (typeof raw.forEach === "function" && !Array.isArray(raw)) {
+            raw.forEach((m: any) => {
+                if (!m) return;
+                result.push({
+                    id: m.id,
+                    position: { x: m.position?.x ?? 0, y: m.position?.y ?? 0, z: m.position?.z ?? 0 },
+                    target: { x: m.target?.x ?? 0, y: m.target?.y ?? 0, z: m.target?.z ?? 0 },
+                    speed: typeof m.speed === "number" ? m.speed : 0,
+                    verticalVelocity: typeof m.verticalVelocity === "number" ? m.verticalVelocity : 0,
+                    isActive: !!m.isActive,
+                    isHit: !!m.isHit,
+                    color: { r: m.color?.r ?? 1, g: m.color?.g ?? 1, b: m.color?.b ?? 1, a: m.color?.a },
+                });
+            });
+        } else {
+            const iterable: any[] = Array.isArray(raw) ? raw : Object.values(raw);
+            for (const m of iterable) {
+                if (!m) continue;
+                result.push({
+                    id: m.id,
+                    position: { x: m.position?.x ?? 0, y: m.position?.y ?? 0, z: m.position?.z ?? 0 },
+                    target: { x: m.target?.x ?? 0, y: m.target?.y ?? 0, z: m.target?.z ?? 0 },
+                    speed: typeof m.speed === "number" ? m.speed : 0,
+                    verticalVelocity: typeof m.verticalVelocity === "number" ? m.verticalVelocity : 0,
+                    isActive: !!m.isActive,
+                    isHit: !!m.isHit,
+                    color: { r: m.color?.r ?? 1, g: m.color?.g ?? 1, b: m.color?.b ?? 1, a: m.color?.a },
+                });
+            }
+        }
+        return result;
+    };
+
+    const emit = () => callback(mapStateToMissiles());
     emit();
     const handler = (_state: any) => emit();
     room.onStateChange(handler);

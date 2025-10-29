@@ -3,7 +3,6 @@ import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { COLORS, type Missile, type SceneContext } from "./types";
-import { saveRoomData } from "./colyseus";
 
 export function updateMissiles(ctx: SceneContext, _spawnIntervalMs: number, _spawnTimerRef: { value: number }): void {
 	// Auto-spawn removed. Only update existing missiles.
@@ -43,9 +42,6 @@ export function dropMissileAt(ctx: SceneContext, x: number, z: number): void {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
     };
     ctx.gameState.missiles.push(missile);
-
-    // persist spawn immediately so other clients can reflect state
-    saveRoomData(ctx.gameState.houses, ctx.gameState.missiles);
 }
 
 function updateMissile(ctx: SceneContext, missile: Missile): void {
@@ -81,6 +77,9 @@ function updateMissile(ctx: SceneContext, missile: Missile): void {
 function explodeMissile(ctx: SceneContext, missile: Missile): void {
     missile.isActive = false;
     missile.mesh.dispose();
+    if (missile.id && ctx.onMissileLocallyRemoved) {
+        ctx.onMissileLocallyRemoved(missile.id);
+    }
     checkMissileHouseCollision(ctx, missile);
 }
 
@@ -109,8 +108,6 @@ function hitHouse(ctx: SceneContext, house: any): void {
         house.mesh.dispose();
     }, 1000);
 
-    // persist game state to Firebase
-    saveRoomData(ctx.gameState.houses, ctx.gameState.missiles);
 }
 
 

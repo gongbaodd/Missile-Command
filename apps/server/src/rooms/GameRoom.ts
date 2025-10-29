@@ -40,6 +40,7 @@ class Missile extends Schema {
     @type("boolean") isHit: boolean = false;
     @type(Rgb) color: Rgb = new Rgb();
     @type("string") id: string = "";
+    @type("string") clientSessionId: string = "";
 }
 
 class Laser extends Schema {
@@ -66,7 +67,6 @@ class GameState extends Schema {
     @type([Laser]) lasers: ArraySchema<Laser> = new ArraySchema<Laser>();
     @type([Marker]) markers: ArraySchema<Marker> = new ArraySchema<Marker>();
     @type("boolean") isGameOver: boolean = false;
-    @type("number") score: number = 0;
 }
 
 export class GameRoom extends Room<GameState> {
@@ -82,7 +82,7 @@ export class GameRoom extends Room<GameState> {
         this.onMessage("spawn_missile", (client, { x, z }: { x: number; z: number }) => {
             const player = this.findPlayer(client.sessionId);
             if (!player || player.role !== PlayerRole.ATTACKER) return;
-            this.spawnMissile(x, z);
+            this.spawnMissile(x, z, client.sessionId);
         });
 
         this.onMessage("add_marker", (client, { x, y, z }: { x: number; y: number; z: number }) => {
@@ -152,7 +152,6 @@ export class GameRoom extends Room<GameState> {
         this.initializeLasers();
         this.initializeHouses();
         this.state.isGameOver = false;
-        this.state.score = 0;
     }
 
     private initializeLasers(): void {
@@ -347,13 +346,14 @@ export class GameRoom extends Room<GameState> {
         h.isDestroyed = true;
     }
 
-    private spawnMissile(x: number, z: number): void {
+    private spawnMissile(x: number, z: number, clientSessionId: string): void {
         const m = new Missile();
         m.position.x = x; m.position.y = 75; m.position.z = z;
         m.target = new Vec3(); m.target.x = x; m.target.y = 0; m.target.z = z;
         m.speed = 0; m.verticalVelocity = 0; m.isActive = true; m.isHit = false;
         m.color.r = Math.random(); m.color.g = Math.random(); m.color.b = Math.random();
         m.id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        m.clientSessionId = clientSessionId;
         this.state.missiles.push(m);
     }
 
@@ -378,17 +378,26 @@ export class GameRoom extends Room<GameState> {
     private resolveMarkerHit(laserIndex: number, x: number, z: number): void {
         const explosionRadius = 5;
         // score missiles destroyed
+        let destroyedCount = 0;
         for (const m of this.state.missiles) {
             if (!m.isActive) continue;
             const d = Math.hypot(m.position.x - x, m.position.z - z);
             if (d <= explosionRadius) {
                 m.isActive = false;
-                this.state.score += 10;
+                destroyedCount += 1;
             }
         }
         // mark marker done
         const marker = this.state.markers.find(m => !m.isDone && m.assignedLaserIndex === laserIndex);
-        if (marker) marker.isDone = true;
+        if (marker) {
+            marker.isDone = true;
+            if (destroyedCount > 0) {
+                const player = this.findPlayer(marker.clientSessionId);
+                if (player) {
+                    player.score += destroyedCount * 10;
+                }
+            }
+        }
     }
 
     private findNearestAvailableLaser(x: number, z: number): number {
