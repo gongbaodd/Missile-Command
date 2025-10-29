@@ -20,8 +20,6 @@ const createRenderCanvas = (): HTMLCanvasElement => {
 };
 
 export const babylonInit = async (container: HTMLElement, playerRole?: PlayerRole): Promise<void> => {
-
-    console.log("playerRole", playerRole);
     const createSceneModule = getSceneModule(playerRole);
     const engineType =
         location.search.split("engine=")[1]?.split("&")[0] || "webgl";
@@ -243,20 +241,28 @@ function App() {
             if (roomExists) {
                 const allPlayers = await getAllPlayersInRoom();
                 const currentPlayerInfo = await getCurrentPlayerInfo();
+
+                // If the player already has a role assigned, allow continuing the game
                 if (currentPlayerInfo?.role && currentPlayerInfo.role !== PlayerRole.UNASSIGNED) {
                     setPlayerRole(currentPlayerInfo.role);
                     setPlayerName(await getCurrentPlayerName());
                     setShowStartGame(false);
                     setShowStartAttacker(false);
                 } else {
-                    if (allPlayers.length === 0) {
+                    // Current player is unassigned: decide based on which roles exist in the room
+                    const hasDefender = allPlayers.some(p => p.role === PlayerRole.DEFENDER);
+                    const hasAttacker = allPlayers.some(p => p.role === PlayerRole.ATTACKER);
+
+                    if (!hasDefender) {
+                        // No defender present -> show Defender start
                         setShowStartGame(true);
                         setShowStartAttacker(false);
-                    } else if (allPlayers.length === 1) {
-                        // Show attacker start when there is exactly one player (the defender) in the room
+                    } else if (!hasAttacker) {
+                        // Defender exists but no attacker -> show Attacker start
                         setShowStartGame(false);
                         setShowStartAttacker(true);
                     } else {
+                        // Both roles present -> show role selection
                         setShowStartGame(false);
                         setShowStartAttacker(false);
                     }

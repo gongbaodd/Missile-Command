@@ -89,7 +89,7 @@ export class MissileCommandScene implements CreateSceneClass {
         this.scene = new Scene(engine);
         this.scene.clearColor = new Color4(0.1, 0.05, 0.34, 1); // Dark purple background
 
-        // void Promise.all([
+        // await Promise.all([
         //     import("@babylonjs/core/Debug/debugLayer"),
         //     import("@babylonjs/inspector"),
         // ]).then((_values) => {
@@ -155,7 +155,7 @@ export class MissileCommandScene implements CreateSceneClass {
         this.camera = new ArcRotateCamera(
             "camera",
             -Math.PI / 2,
-            Math.PI / 3,
+            Math.PI / 6,
             150,
             Vector3.Zero(),
             this.scene
