@@ -159,6 +159,22 @@ function StartDefenderSection(props: { isLoading: boolean; onStart: () => void }
     );
 }
 
+function StartAttackerSection(props: { isLoading: boolean; onStart: () => void }) {
+    return (
+        <div class="space-y-6">
+            <InstructionImage role={PlayerRole.ATTACKER} />
+            <LoadingButton
+                class="btn btn-secondary btn-lg text-lg px-8 py-4"
+                onClick={props.onStart}
+                disabled={props.isLoading}
+                isLoading={props.isLoading}
+            >
+                Start Game
+            </LoadingButton>
+        </div>
+    );
+}
+
 function ContinueGameSection(props: { isLoading: boolean; role: PlayerRole | null; onContinue: () => void }) {
     return (
         <div class="space-y-6">
@@ -212,6 +228,7 @@ function App() {
     const [gameOverReason, setGameOverReason] = createSignal<string | undefined>(undefined);
     const [playerRole, setPlayerRole] = createSignal<PlayerRole | null>(null);
     const [showStartGame, setShowStartGame] = createSignal(true);
+    const [showStartAttacker, setShowStartAttacker] = createSignal(false);
     const [playerName, setPlayerName] = createSignal<string | null>(null);
     const [players, setPlayers] = createSignal<RoomPlayer[]>([]);
     let disposePlayers: (() => void) | null = null;
@@ -226,19 +243,22 @@ function App() {
             if (roomExists) {
                 const allPlayers = await getAllPlayersInRoom();
                 const currentPlayerInfo = await getCurrentPlayerInfo();
-                if (currentPlayerInfo) {
+                if (currentPlayerInfo?.role && currentPlayerInfo.role !== PlayerRole.UNASSIGNED) {
                     setPlayerRole(currentPlayerInfo.role);
                     setPlayerName(await getCurrentPlayerName());
                     setShowStartGame(false);
+                    setShowStartAttacker(false);
                 } else {
                     if (allPlayers.length === 0) {
                         setShowStartGame(true);
+                        setShowStartAttacker(false);
                     } else if (allPlayers.length === 1) {
-                        await assignRole(PlayerRole.ATTACKER);
-                        setPlayerName(await getCurrentPlayerName());
+                        // Show attacker start when there is exactly one player (the defender) in the room
                         setShowStartGame(false);
+                        setShowStartAttacker(true);
                     } else {
                         setShowStartGame(false);
+                        setShowStartAttacker(false);
                     }
                 }
             }
@@ -267,6 +287,30 @@ function App() {
             const container = document.getElementById("game-container");
             if (container) {
                 await babylonInit(container, PlayerRole.DEFENDER);
+                console.log("Babylon.js scene initialized successfully");
+            }
+        } catch (error) {
+            console.error("Failed to initialize Babylon.js scene:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const startAttacker = async () => {
+        setIsLoading(true);
+        setGameStarted(true);
+        setIsGameOver(false);
+        setFinalScore(0);
+        setGameOverReason(undefined);
+
+        try {
+            // Register this client as Attacker in Firebase for this room
+            await assignRole(PlayerRole.ATTACKER);
+            setPlayerName(await getCurrentPlayerName());
+
+            const container = document.getElementById("game-container");
+            if (container) {
+                await babylonInit(container, PlayerRole.ATTACKER);
                 console.log("Babylon.js scene initialized successfully");
             }
         } catch (error) {
@@ -358,10 +402,12 @@ function App() {
                     <SectionHeader />
                     {isCheckingHash() ? (
                         <CheckingRoom />
-                    ) : !showStartGame() && !playerRole() ? (
+                    ) : !showStartGame() && !showStartAttacker() && !playerRole() ? (
                         <RoleSelection isLoading={isLoading()} onSelect={selectRole} />
                     ) : showStartGame() ? (
                         <StartDefenderSection isLoading={isLoading()} onStart={startGame} />
+                    ) : showStartAttacker() ? (
+                        <StartAttackerSection isLoading={isLoading()} onStart={startAttacker} />
                     ) : (
                         <ContinueGameSection isLoading={isLoading()} role={playerRole()} onContinue={continueGame} />
                     )}

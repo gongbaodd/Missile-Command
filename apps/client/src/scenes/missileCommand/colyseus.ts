@@ -338,7 +338,7 @@ export async function getAllPlayersInRoom(_roomHash?: string): Promise<PlayerInf
                     });
                 }
             }
-            return result;
+            return result.filter((player) => player.role !== PlayerRole.UNASSIGNED);
         };
 
         // Try immediate read first
