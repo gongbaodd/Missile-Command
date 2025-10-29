@@ -144,7 +144,7 @@ export function updateLasers(ctx: SceneContext): void {
         if (clampedLength >= (laser.beamTotalLength ?? 0)) {
             let marker = laser.currentMarker;
             if (!marker) {
-                marker = ctx.gameState.markers.find(m => !m.isDone && m.assignedLaser === laser);
+                marker = ctx.gameState.markers.find(m => !m.isDone && (m as any).assignedLaser === laser);
             }
             if (marker) {
                 resolveMarkerHit(ctx, marker);

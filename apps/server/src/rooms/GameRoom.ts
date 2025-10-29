@@ -47,6 +47,8 @@ class Laser extends Schema {
     @type("boolean") isBusy: boolean = false;
     @type(Vec3) target?: Vec3;
     @type("number") shootTime: number = 0;
+    @type(Vec3) beamStart: Vec3 = new Vec3();
+    @type(Vec3) beamEnd: Vec3 = new Vec3();
 }
 
 class Marker extends Schema {
@@ -273,17 +275,32 @@ export class GameRoom extends Room<GameState> {
         const beamSpeed = 40; // units/s
         for (let li = 0; li < this.state.lasers.length; li++) {
             const laser = this.state.lasers[li];
-            if (!laser.isBusy || !laser.target) continue;
+            if (!laser.isBusy || !laser.target) {
+                // ensure beams are cleared when idle
+                laser.beamStart.x = laser.position.x; laser.beamStart.y = 3.5; laser.beamStart.z = laser.position.z;
+                laser.beamEnd.x = laser.position.x; laser.beamEnd.y = 3.5; laser.beamEnd.z = laser.position.z;
+                continue;
+            }
             laser.shootTime += dt;
             // when beam reaches target
             const startX = laser.position.x, startZ = laser.position.z;
             const dist = Math.hypot(laser.target.x - startX, laser.target.z - startZ);
+            // update beam start/end while traveling
+            const startY = 3.5;
+            laser.beamStart.x = startX; laser.beamStart.y = startY; laser.beamStart.z = startZ;
+            const t = Math.min(1, (laser.shootTime * beamSpeed) / (dist > 0 ? dist : 1));
+            laser.beamEnd.x = startX + (laser.target.x - startX) * t;
+            laser.beamEnd.y = startY + (laser.target.y - startY) * t;
+            laser.beamEnd.z = startZ + (laser.target.z - startZ) * t;
             if (laser.shootTime * beamSpeed >= dist) {
                 // resolve explosion at target
                 this.resolveMarkerHit(li, laser.target.x, laser.target.z);
                 laser.isBusy = false;
                 laser.target = undefined;
                 laser.shootTime = 0;
+                // finalize and clear beam
+                laser.beamStart.x = startX; laser.beamStart.y = startY; laser.beamStart.z = startZ;
+                laser.beamEnd.x = startX; laser.beamEnd.y = startY; laser.beamEnd.z = startZ;
             }
         }
     }
@@ -335,12 +352,16 @@ export class GameRoom extends Room<GameState> {
     }
 
     private addMarker(x: number, y: number, z: number, clientSessionId: string): void {
+        // TODO: potential bug here, if the laser is not available, the marker will not be added
         const laserIndex = this.findNearestAvailableLaser(x, z);
         if (laserIndex < 0) return;
         const laser = this.state.lasers[laserIndex];
         laser.isBusy = true;
         const target = new Vec3(); target.x = x; target.y = 0; target.z = z;
         laser.target = target; laser.shootTime = 0;
+        // initialize beam positions
+        laser.beamStart.x = laser.position.x; laser.beamStart.y = 3.5; laser.beamStart.z = laser.position.z;
+        laser.beamEnd.x = laser.beamStart.x; laser.beamEnd.y = laser.beamStart.y; laser.beamEnd.z = laser.beamStart.z;
 
         const marker = new Marker();
         marker.position.x = x; marker.position.y = y; marker.position.z = z;
