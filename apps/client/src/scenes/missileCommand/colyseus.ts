@@ -9,7 +9,8 @@ let roomPromise: Promise<Room> | null = null;
 
 function getClient(): Client {
     if (!client) {
-        client = new Client("ws://localhost:2567");
+        const server = (process.env.SERVER as string) || "ws://localhost:2567";
+        client = new Client(server);
     }
     return client;
 }
