@@ -5,7 +5,7 @@ import { WebGPUEngine } from "@babylonjs/core/Engines/webgpuEngine";
 import { getSceneModule } from "./createScene";
 import { AbstractEngine } from "@babylonjs/core/Engines/abstractEngine";
 import "./index.css";
-import { registerPlayer, getCurrentPlayerInfo, checkRoomExists, getAllPlayersInRoom, getCurrentPlayerName, listenToPlayers, type RoomPlayer } from "./scenes/missileCommand/colyseus";
+import { getCurrentPlayerInfo, checkRoomExists, getAllPlayersInRoom, getCurrentPlayerName, listenToPlayers, assignRole, type RoomPlayer } from "./scenes/missileCommand/colyseus";
 import { PlayerRole } from "./scenes/missileCommand/types";
 
 // Create the renderCanvas element
@@ -234,8 +234,7 @@ function App() {
                     if (allPlayers.length === 0) {
                         setShowStartGame(true);
                     } else if (allPlayers.length === 1) {
-                        await registerPlayer(PlayerRole.ATTACKER);
-                        setPlayerRole(PlayerRole.ATTACKER);
+                        await assignRole(PlayerRole.ATTACKER);
                         setPlayerName(await getCurrentPlayerName());
                         setShowStartGame(false);
                     } else {
@@ -262,7 +261,7 @@ function App() {
 
         try {
             // Register this client as Defender in Firebase for this room
-            await registerPlayer(PlayerRole.DEFENDER);
+            await assignRole(PlayerRole.DEFENDER);
             setPlayerName(await getCurrentPlayerName());
 
             const container = document.getElementById("game-container");
@@ -301,8 +300,9 @@ function App() {
         setIsLoading(true);
         
         try {
+            // Inform the server of the chosen role
+            await assignRole(role);
             // Register the player with the selected role
-            await registerPlayer(role);
             setPlayerRole(role);
             setPlayerName(await getCurrentPlayerName());
             

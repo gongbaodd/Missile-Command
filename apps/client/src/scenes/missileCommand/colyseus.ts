@@ -290,45 +290,19 @@ export function listenForMissileSpawns(callback: (x: number, z: number, eventKey
     };
 }
 
-export async function registerPlayer(role: PlayerRole): Promise<void> {
+
+export async function assignRole(role: PlayerRole): Promise<void> {
     try {
         const room = await getRoom();
-        // Generate a stable, installation-like id per browser using localStorage
-        let fid = localStorage.getItem("mc_fid");
-        if (!fid) {
-            fid = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-            localStorage.setItem("mc_fid", fid);
-        }
-        room.send("registerPlayer", { role, fid });
+        room.send("assign_role", { role });
     } catch (error) {
-        console.error("Failed to register player via Colyseus:", error);
+        console.error("Failed to assign role via Colyseus:", error);
     }
 }
 
 export async function getCurrentPlayerInfo(): Promise<PlayerInfo | null> {
-    try {
-        const room = await getRoom();
-        let fid = localStorage.getItem("mc_fid");
-        if (!fid) return null;
-        room.send("getCurrentPlayerInfo", { fid });
-        return await new Promise<PlayerInfo | null>((resolve) => {
-            let resolved = false;
-            const handler = (payload: PlayerInfo | null) => {
-                if (resolved) return;
-                resolved = true;
-                resolve(payload);
-            };
-            room.onMessage("currentPlayerInfo", handler as any);
-            setTimeout(() => {
-                if (resolved) return;
-                resolved = true;
-                resolve(null);
-            }, 1500);
-        });
-    } catch (error) {
-        console.error("Failed to get current player info via Colyseus:", error);
-        return null;
-    }
+    const room = await getRoom();
+    return room.state.players.find((p: any) => p.id === room.sessionId);
 }
 
 export async function getAllPlayersInRoom(_roomHash?: string): Promise<PlayerInfo[]> {
