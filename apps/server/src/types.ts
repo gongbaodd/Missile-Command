@@ -1,4 +1,5 @@
 export enum PlayerRole {
 	ATTACKER = 'attacker',
-	DEFENDER = 'defender'
+	DEFENDER = 'defender',
+    UNASSIGNED = 'unassigned'
 }

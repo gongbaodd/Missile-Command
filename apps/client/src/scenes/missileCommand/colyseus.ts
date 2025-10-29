@@ -92,9 +92,10 @@ export interface SerializedRoomData {
 }
 
 export interface PlayerInfo {
-    fid: string;
+    id: string;
     role: PlayerRole;
-    lastSeen: number;
+    name: string;
+    score: number;
 }
 
 export function serializeHouses(houses: House[]): SerializedHouse[] {
@@ -333,19 +334,62 @@ export async function getCurrentPlayerInfo(): Promise<PlayerInfo | null> {
 export async function getAllPlayersInRoom(_roomHash?: string): Promise<PlayerInfo[]> {
     try {
         const room = await getRoom();
-        room.send("getAllPlayers");
+        const mapPlayers = (): PlayerInfo[] => {
+            const state: any = (room as any).state;
+            if (!state || !state.players) return [];
+            const raw = state.players;
+            const result: PlayerInfo[] = [];
+            if (typeof raw.forEach === "function" && !Array.isArray(raw)) {
+                raw.forEach((p: any, key: string) => {
+                    if (!p) return;
+                    const id = (p.id ?? p.sessionId ?? key) as string;
+                    result.push({
+                        id,
+                        name: p.name ?? "",
+                        score: typeof p.score === "number" ? p.score : 0,
+                        role: (p.role as PlayerRole) ?? PlayerRole.UNASSIGNED,
+                    });
+                });
+            } else {
+                const iterable: any[] = Array.isArray(raw) ? raw : Object.values(raw);
+                for (const p of iterable) {
+                    if (!p) continue;
+                    const id = (p.id ?? p.sessionId) as string;
+                    if (!id) continue;
+                    result.push({
+                        id,
+                        name: p.name ?? "",
+                        score: typeof p.score === "number" ? p.score : 0,
+                        role: (p.role as PlayerRole) ?? PlayerRole.UNASSIGNED,
+                    });
+                }
+            }
+            return result;
+        };
+
+        // Try immediate read first
+        const immediate = mapPlayers();
+        if (immediate.length > 0) return immediate;
+
+        // Wait briefly for initial state sync if players are not yet present
         return await new Promise<PlayerInfo[]>((resolve) => {
             let resolved = false;
-            const handler = (payload: PlayerInfo[]) => {
+            const handler = (_state: any) => {
                 if (resolved) return;
-                resolved = true;
-                resolve(payload || []);
+                const players = mapPlayers();
+                if (players.length > 0) {
+                    resolved = true;
+                    resolve(players);
+                    try { (room as any).off?.("statechange", handler); } catch (_e) { /* noop */ }
+                }
             };
-            room.onMessage("allPlayers", handler as any);
+            room.onStateChange(handler);
+            // Fallback: resolve after timeout even if still empty
             setTimeout(() => {
                 if (resolved) return;
                 resolved = true;
-                resolve([]);
+                try { (room as any).off?.("statechange", handler); } catch (_e) { /* noop */ }
+                resolve(mapPlayers());
             }, 1500);
         });
     } catch (error) {
@@ -433,7 +477,7 @@ export async function listenToPlayers(callback: (players: RoomPlayer[]) => void)
                     id,
                     name: p.name ?? "",
                     score: typeof p.score === "number" ? p.score : 0,
-                    role: (p.role as PlayerRole) ?? PlayerRole.DEFENDER,
+                    role: (p.role as PlayerRole) ?? PlayerRole.UNASSIGNED,
                 });
             });
         } else {
@@ -446,7 +490,7 @@ export async function listenToPlayers(callback: (players: RoomPlayer[]) => void)
                     id,
                     name: p.name ?? "",
                     score: typeof p.score === "number" ? p.score : 0,
-                    role: (p.role as PlayerRole) ?? PlayerRole.DEFENDER,
+                    role: (p.role as PlayerRole) ?? PlayerRole.UNASSIGNED,
                 });
             }
         }

@@ -91,6 +91,12 @@ export class GameRoom extends Room<GameState> {
             this.addMarker(x, y, z, client.sessionId);
         });
 
+        this.onMessage("assign_role", (client, { role }: { role: PlayerRole }) => {
+            const player = this.findPlayer(client.sessionId);
+            if (!player) return;
+            player.role = role;
+        });
+
         // Initialize scene
         this.initializeScene();
 
@@ -104,7 +110,7 @@ export class GameRoom extends Room<GameState> {
         const player = new Player();
         player.id = client.sessionId;
         player.name = generateUsername("-", 2, 20);
-        player.role = options.role ?? PlayerRole.DEFENDER;
+        player.role = options.role ?? PlayerRole.UNASSIGNED;
         this.state.players.push(player);
 
         this.broadcast("messages", `${ client.sessionId }, name: ${ player.name }, role: ${ player.role } joined.`);
