@@ -70,6 +70,140 @@ export const babylonInit = async (container: HTMLElement, playerRole?: PlayerRol
     });
 };
 
+function LoadingButton(props: { class?: string; onClick?: () => void; disabled?: boolean; isLoading?: boolean; children: any }) {
+    return (
+        <button class={props.class || "btn"} onClick={props.onClick} disabled={props.disabled}>
+            <Show when={props.isLoading} fallback={props.children}>
+                <>
+                    <span class="loading loading-spinner loading-md"></span>
+                    Loading...
+                </>
+            </Show>
+        </button>
+    );
+}
+
+function InstructionImage(props: { role: PlayerRole; maxH?: string; alt?: string }) {
+    const src = () => props.role === PlayerRole.DEFENDER ? "/defender_instruction.png" : "/attack_instruction.png";
+    const maxH = props.maxH || "max-h-[50vh]";
+    const alt = props.alt || (props.role === PlayerRole.DEFENDER ? "Defender instructions" : "Attacker instructions");
+    return (
+        <img src={src()} alt={alt} class={`mx-auto ${maxH} rounded shadow-xl`} />
+    );
+}
+
+function SectionHeader() {
+    return (
+        <div class="space-y-4">
+            <h1 class="text-6xl font-bold text-white mb-4">Missile Command</h1>
+            <p class="text-xl text-gray-300 opacity-75">Defend your cities from incoming missiles!</p>
+        </div>
+    );
+}
+
+function CheckingRoom() {
+    return (
+        <div class="flex items-center justify-center space-x-2">
+            <span class="loading loading-spinner loading-md"></span>
+            <span class="text-gray-300">Checking room...</span>
+        </div>
+    );
+}
+
+function RoleSelection(props: { isLoading: boolean; onSelect: (role: PlayerRole) => void }) {
+    return (
+        <div class="text-center space-y-6">
+            <div class="text-xl text-yellow-400 font-semibold">Choose Your Role</div>
+            <p class="text-gray-300 opacity-75">This room already has players. Choose which role you want to play:</p>
+            <div class="flex gap-4 justify-center">
+                <div class="space-y-4">
+                    <InstructionImage role={PlayerRole.DEFENDER} maxH="max-h-[30vh]" />
+                    <LoadingButton
+                        class="btn btn-primary btn-lg text-lg px-8 py-4"
+                        onClick={() => props.onSelect(PlayerRole.DEFENDER)}
+                        disabled={props.isLoading}
+                        isLoading={props.isLoading}
+                    >
+                        Play as Defender
+                    </LoadingButton>
+                </div>
+                <div class="space-y-4">
+                    <InstructionImage role={PlayerRole.ATTACKER} maxH="max-h-[30vh]" />
+                    <LoadingButton
+                        class="btn btn-secondary btn-lg text-lg px-8 py-4"
+                        onClick={() => props.onSelect(PlayerRole.ATTACKER)}
+                        disabled={props.isLoading}
+                        isLoading={props.isLoading}
+                    >
+                        Play as Attacker
+                    </LoadingButton>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function StartDefenderSection(props: { isLoading: boolean; onStart: () => void }) {
+    return (
+        <div class="space-y-6">
+            <InstructionImage role={PlayerRole.DEFENDER} />
+            <LoadingButton
+                class="btn btn-primary btn-lg text-lg px-8 py-4"
+                onClick={props.onStart}
+                disabled={props.isLoading}
+                isLoading={props.isLoading}
+            >
+                Start Game
+            </LoadingButton>
+        </div>
+    );
+}
+
+function ContinueGameSection(props: { isLoading: boolean; role: PlayerRole | null; onContinue: () => void }) {
+    return (
+        <div class="space-y-6">
+            <InstructionImage role={props.role === PlayerRole.ATTACKER ? PlayerRole.ATTACKER : PlayerRole.DEFENDER} />
+            <LoadingButton
+                class="btn btn-secondary btn-lg text-lg px-8 py-4"
+                onClick={props.onContinue}
+                disabled={props.isLoading}
+                isLoading={props.isLoading}
+            >
+                {props.role === PlayerRole.DEFENDER ? "Continue Defending" : "Continue Attacking"}
+            </LoadingButton>
+        </div>
+    );
+}
+
+function GameOverOverlay(props: { score: number; reason?: string; onRestart: () => void }) {
+    return (
+        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center">
+            <div class="bg-slate-800 border border-slate-700 rounded-xl p-8 shadow-2xl text-center space-y-6 max-w-sm w-full mx-4">
+                <h2 class="text-3xl font-bold text-white">Game Over</h2>
+                <div class="text-gray-300">
+                    <div class="text-lg">Score: <span class="font-semibold text-white">{props.score}</span></div>
+                    <Show when={props.reason}>
+                        <div class="text-sm opacity-75 mt-1">Reason: {props.reason}</div>
+                    </Show>
+                </div>
+                <div class="flex gap-3 justify-center">
+                    <button class="btn btn-primary" onClick={props.onRestart}>Restart</button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function PlayerNameBadge(props: { name?: string | null }) {
+    return (
+        <Show when={props.name}>
+            <div class="absolute top-3 left-3 text-sm text-white bg-black/40 rounded px-2 py-1">
+                {props.name}
+            </div>
+        </Show>
+    );
+}
+
 function App() {
     const [gameStarted, setGameStarted] = createSignal(false);
     const [isLoading, setIsLoading] = createSignal(false);
@@ -221,134 +355,26 @@ function App() {
                     <div class="max-w-2xl mx-auto">
                         <PlayersTables players={players()} currentName={playerName() || undefined} />
                     </div>
-                    <div class="space-y-4">
-                        <h1 class="text-6xl font-bold text-white mb-4">
-                            Missile Command
-                        </h1>
-                        <p class="text-xl text-gray-300 opacity-75">
-                            Defend your cities from incoming missiles!
-                        </p>
-                    </div>
+                    <SectionHeader />
                     {isCheckingHash() ? (
-                        <div class="flex items-center justify-center space-x-2">
-                            <span class="loading loading-spinner loading-md"></span>
-                            <span class="text-gray-300">Checking room...</span>
-                        </div>
+                        <CheckingRoom />
                     ) : !showStartGame() && !playerRole() ? (
-                        <div class="text-center space-y-6">
-                            <div class="text-xl text-yellow-400 font-semibold">
-                                Choose Your Role
-                            </div>
-                            <p class="text-gray-300 opacity-75">
-                                This room already has players. Choose which role you want to play:
-                            </p>
-                            <div class="flex gap-4 justify-center">
-                                <div class="space-y-4">
-                                    <img src={"/defender_instruction.png"} alt="Defender instructions" class="mx-auto max-h-[30vh] rounded shadow-xl" />
-                                    <button
-                                        class="btn btn-primary btn-lg text-lg px-8 py-4"
-                                        onClick={() => selectRole(PlayerRole.DEFENDER)}
-                                        disabled={isLoading()}
-                                    >
-                                        {isLoading() ? (
-                                            <>
-                                                <span class="loading loading-spinner loading-md"></span>
-                                                Loading...
-                                            </>
-                                        ) : (
-                                            "Play as Defender"
-                                        )}
-                                    </button>
-                                </div>
-                                <div class="space-y-4">
-                                    <img src={"/attack_instruction.png"} alt="Attacker instructions" class="mx-auto max-h-[30vh] rounded shadow-xl" />
-                                    <button
-                                        class="btn btn-secondary btn-lg text-lg px-8 py-4"
-                                        onClick={() => selectRole(PlayerRole.ATTACKER)}
-                                        disabled={isLoading()}
-                                    >
-                                        {isLoading() ? (
-                                            <>
-                                                <span class="loading loading-spinner loading-md"></span>
-                                                Loading...
-                                            </>
-                                        ) : (
-                                            "Play as Attacker"
-                                        )}
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
+                        <RoleSelection isLoading={isLoading()} onSelect={selectRole} />
                     ) : showStartGame() ? (
-                        <div class="space-y-6">
-                            <img src={"/defender_instruction.png"} alt="Defender instructions" class="mx-auto max-h-[50vh] rounded shadow-xl" />
-                            <button
-                                class="btn btn-primary btn-lg text-lg px-8 py-4"
-                                onClick={startGame}
-                                disabled={isLoading()}
-                            >
-                                {isLoading() ? (
-                                    <>
-                                        <span class="loading loading-spinner loading-md"></span>
-                                        Loading...
-                                    </>
-                                ) : (
-                                    "Start Game"
-                                )}
-                            </button>
-                        </div>
+                        <StartDefenderSection isLoading={isLoading()} onStart={startGame} />
                     ) : (
-                        <div class="space-y-6">
-                            {playerRole() === PlayerRole.DEFENDER ? (
-                                <img src={"/defender_instruction.png"} alt="Defender instructions" class="mx-auto max-h-[50vh] rounded shadow-xl" />
-                            ) : (
-                                <img src={"/attack_instruction.png"} alt="Attacker instructions" class="mx-auto max-h-[50vh] rounded shadow-xl" />
-                            )}
-                            <button
-                                class="btn btn-secondary btn-lg text-lg px-8 py-4"
-                                onClick={continueGame}
-                                disabled={isLoading()}
-                            >
-                                {isLoading() ? (
-                                    <>
-                                        <span class="loading loading-spinner loading-md"></span>
-                                        Loading...
-                                    </>
-                                ) : playerRole() === PlayerRole.DEFENDER ? (
-                                    "Continue Defending"
-                                ) : (
-                                    "Continue Attacking"
-                                )}
-                            </button>
-                        </div>
+                        <ContinueGameSection isLoading={isLoading()} role={playerRole()} onContinue={continueGame} />
                     )}
                 </div>
             ) : (
                 <div class="relative w-full h-full flex items-center justify-center">
-                    <Show when={playerName()}>
-                        <div class="absolute top-3 left-3 text-sm text-white bg-black/40 rounded px-2 py-1">
-                            {playerName()}
-                        </div>
-                    </Show>
+                    <PlayerNameBadge name={playerName()} />
                     <div class="absolute top-3 right-3 max-w-sm">
                         <PlayersTables players={players()} small currentName={playerName() || undefined} />
                     </div>
                     <div id="game-container" class="w-full h-full flex items-center justify-center" />
                     <Show when={isGameOver()}>
-                        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center">
-                            <div class="bg-slate-800 border border-slate-700 rounded-xl p-8 shadow-2xl text-center space-y-6 max-w-sm w-full mx-4">
-                                <h2 class="text-3xl font-bold text-white">Game Over</h2>
-                                <div class="text-gray-300">
-                                    <div class="text-lg">Score: <span class="font-semibold text-white">{finalScore()}</span></div>
-                                    <Show when={gameOverReason()}>
-                                        <div class="text-sm opacity-75 mt-1">Reason: {gameOverReason()}</div>
-                                    </Show>
-                                </div>
-                                <div class="flex gap-3 justify-center">
-                                    <button class="btn btn-primary" onClick={restart}>Restart</button>
-                                </div>
-                            </div>
-                        </div>
+                        <GameOverOverlay score={finalScore()} reason={gameOverReason()} onRestart={restart} />
                     </Show>
                 </div>
             )}
