@@ -54,6 +54,7 @@ class Marker extends Schema {
     @type("number") time: number = 0;
     @type("boolean") isDone: boolean = false;
     @type("number") assignedLaserIndex: number = -1;
+    @type("string") clientSessionId: string = "";
 }
 
 class GameState extends Schema {
@@ -85,7 +86,7 @@ export class GameRoom extends Room<GameState> {
         this.onMessage("add_marker", (client, { x, y, z }: { x: number; y: number; z: number }) => {
             const player = this.findPlayer(client.sessionId);
             if (!player || player.role !== PlayerRole.DEFENDER) return;
-            this.addMarker(x, y, z);
+            this.addMarker(x, y, z, client.sessionId);
         });
 
         // Initialize scene
@@ -112,6 +113,21 @@ export class GameRoom extends Room<GameState> {
         if (!player) return;
         const idx = this.state.players.findIndex(p => p.id === client.sessionId);
         if (idx >= 0) this.state.players.splice(idx, 1);
+
+        // Clean up any active markers/lasers associated with this client
+        for (let i = this.state.markers.length - 1; i >= 0; i--) {
+            const marker = this.state.markers[i];
+            if (marker.clientSessionId === client.sessionId && !marker.isDone) {
+                const li = marker.assignedLaserIndex;
+                if (li >= 0 && li < this.state.lasers.length) {
+                    const laser = this.state.lasers[li];
+                    laser.isBusy = false;
+                    laser.target = undefined;
+                    laser.shootTime = 0;
+                }
+                this.state.markers.splice(i, 1);
+            }
+        }
 
         this.broadcast("messages", `${ client.sessionId }, name: ${ player.name }, role: ${ player.role } left.`);
     }
@@ -318,7 +334,7 @@ export class GameRoom extends Room<GameState> {
         this.state.missiles.push(m);
     }
 
-    private addMarker(x: number, y: number, z: number): void {
+    private addMarker(x: number, y: number, z: number, clientSessionId: string): void {
         const laserIndex = this.findNearestAvailableLaser(x, z);
         if (laserIndex < 0) return;
         const laser = this.state.lasers[laserIndex];
@@ -328,7 +344,7 @@ export class GameRoom extends Room<GameState> {
 
         const marker = new Marker();
         marker.position.x = x; marker.position.y = y; marker.position.z = z;
-        marker.time = 0; marker.isDone = false; marker.assignedLaserIndex = laserIndex;
+        marker.time = 0; marker.isDone = false; marker.assignedLaserIndex = laserIndex; marker.clientSessionId = clientSessionId;
         this.state.markers.push(marker);
     }
 
