@@ -334,19 +334,31 @@ export class GameRoom extends Room<GameState> {
             if (h.isDestroyed) continue;
             const d = Math.hypot(m.position.x - h.position.x, m.position.z - h.position.z);
             if (d < 3) {
-                this.hitHouse(h);
+                this.hitHouse(h, m.clientSessionId);
                 m.isActive = false;
                 return;
             }
         }
     }
 
-    private hitHouse(h: House): void {
+    private hitHouse(h: House, attackerSessionId: string): void {
         h.isHit = true;
         h.isDestroyed = true;
+
+        // Award 100 points to attacker for destroying a building
+        const attacker = this.findPlayer(attackerSessionId);
+        if (attacker) {
+            attacker.score += 100;
+        }
     }
 
     private spawnMissile(x: number, z: number, clientSessionId: string): void {
+        // Deduct 10 points from attacker for spawning a missile
+        const attacker = this.findPlayer(clientSessionId);
+        if (attacker) {
+            attacker.score -= 10;
+        }
+
         const m = new Missile();
         m.position.x = x; m.position.y = 75; m.position.z = z;
         m.target = new Vec3(); m.target.x = x; m.target.y = 0; m.target.z = z;
@@ -394,7 +406,8 @@ export class GameRoom extends Room<GameState> {
             if (destroyedCount > 0) {
                 const player = this.findPlayer(marker.clientSessionId);
                 if (player) {
-                    player.score += destroyedCount * 10;
+                    // Award 50 points per destroyed missile to defender
+                    player.score += destroyedCount * 50;
                 }
             }
         }
